@@ -36,7 +36,6 @@ model RevenueLine {
   staff        Staff?              @relation(fields: [staffId], references: [id], onDelete: SetNull)
   operator     ElectronicOperator?
   total        Float
-  pos          Float
   cash         Float
 }
 

@@ -46,25 +46,21 @@ export async function GET(
               department: Department.RECEPTION_BOWLING,
               subLabel: "Regular",
               total: 0,
-              pos: 0,
               cash: 0,
             },
             {
               department: Department.BILIARDA,
               total: 0,
-              pos: 0,
               cash: 0,
             },
             {
               department: Department.BAR,
               total: 0,
-              pos: 0,
               cash: 0,
             },
             {
               department: Department.SERVICE,
               total: 0,
-              pos: 0,
               cash: 0,
             },
           ],
@@ -216,7 +212,6 @@ export async function PATCH(
             staffId: r.staffId ?? null,
             operator: r.operator ?? null,
             total: r.total,
-            pos: 0,
             cash: r.cash ?? r.total,
           })),
         });
