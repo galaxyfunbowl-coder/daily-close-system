@@ -244,14 +244,14 @@ export default function DailyPage() {
   if (loading && !day) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-neutral-500">Φόρτωση...</p>
+        <p className="text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
       </div>
     );
   }
 
   if (!day) {
     return (
-      <div className="rounded border border-red-200 bg-red-50 p-4 text-red-800">
+      <div className="rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 p-4 text-red-800 dark:text-red-200">
         {error || "Δεν βρέθηκε ημέρα"}
       </div>
     );
@@ -259,38 +259,38 @@ export default function DailyPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <h1 className="text-lg font-semibold">Καθημερινό Κλείσιμο</h1>
+      <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Καθημερινό Κλείσιμο</h1>
 
       {/* SECTION A — GENERAL */}
-      <section className="rounded-lg border bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-medium text-neutral-700">Γενικά</h2>
+      <section className="card-section">
+        <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Γενικά</h2>
         <div className="space-y-3">
           <div>
-            <label className="block text-sm text-neutral-600">Ημερομηνία</label>
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Ημερομηνία</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
+              className="input-field mt-1"
             />
-            <p className="mt-1 text-sm text-neutral-500">{weekdayLabel(date)}</p>
+            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{weekdayLabel(date)}</p>
           </div>
           <div>
-            <label className="block text-sm text-neutral-600">Σημειώσεις</label>
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Σημειώσεις</label>
             <input
               type="text"
               value={day.notes}
               onChange={(e) => updateDay({ notes: e.target.value })}
               placeholder="Προαιρετικό"
-              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
+              className="input-field mt-1"
             />
           </div>
-          <label className="flex items-center gap-2">
+          <label className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
             <input
               type="checkbox"
               checked={day.isClosed}
               onChange={(e) => updateDay({ isClosed: e.target.checked })}
-              className="rounded"
+              className="rounded border-neutral-300 dark:border-neutral-600 dark:bg-neutral-700"
             />
             <span className="text-sm">Κλειστό</span>
           </label>
@@ -298,11 +298,11 @@ export default function DailyPage() {
       </section>
 
       {/* SECTION B — Z CONTROL */}
-      <section className="rounded-lg border bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-medium text-neutral-700">Έλεγχος Z</h2>
+      <section className="card-section">
+        <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Έλεγχος Z</h2>
         <div className="space-y-3">
           <div>
-            <label className="block text-sm text-neutral-600">Z POS Σύνολο (απαιτείται)</label>
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Z POS Σύνολο (απαιτείται)</label>
             <input
               type="number"
               step="0.01"
@@ -312,11 +312,11 @@ export default function DailyPage() {
                 const v = e.target.value;
                 updateDay({ zPosTotal: v === "" ? null : parseFloat(v) || 0 });
               }}
-              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
+              className="input-field mt-1"
             />
           </div>
           <div>
-            <label className="block text-sm text-neutral-600">Z Μετρητά (προαιρετικό)</label>
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Z Μετρητά (προαιρετικό)</label>
             <input
               type="number"
               step="0.01"
@@ -326,14 +326,14 @@ export default function DailyPage() {
                 const v = e.target.value;
                 updateDay({ zCashTotal: v === "" ? null : parseFloat(v) || 0 });
               }}
-              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
+              className="input-field mt-1"
             />
           </div>
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
             Υπολογισμένο POS (γραμμές + πάρτυ): <strong>{calculatedTotalPOS.toFixed(2)}</strong>
           </p>
           {posDiff !== null && Math.abs(posDiff) > 0.001 && (
-            <div className="rounded border-2 border-red-500 bg-red-50 p-3 text-red-800">
+            <div className="rounded border-2 border-red-500 dark:border-red-600 bg-red-50 dark:bg-red-950 p-3 text-red-800 dark:text-red-200">
               <strong>Διαφορά POS:</strong> {posDiff.toFixed(2)}
             </div>
           )}
@@ -341,16 +341,16 @@ export default function DailyPage() {
       </section>
 
       {/* SECTION C — REVENUE LINES */}
-      <section className="rounded-lg border bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-medium text-neutral-700">Έσοδα</h2>
+      <section className="card-section">
+        <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Έσοδα</h2>
         <div className="space-y-4">
           {day.revenueLines.map((line, idx) => (
             <div
               key={line.id}
-              className="rounded border border-neutral-200 bg-neutral-50/50 p-3 space-y-2"
+              className="rounded border border-neutral-200 dark:border-neutral-600 bg-neutral-50 dark:bg-neutral-800/50 p-3 space-y-2"
             >
               <div className="flex items-center justify-between">
-                <span className="font-medium text-neutral-800">
+                <span className="font-medium text-neutral-800 dark:text-neutral-200">
                   {line.department === "RECEPTION_BOWLING" && line.subLabel
                     ? `${DEPARTMENT_LABELS.RECEPTION_BOWLING} — ${line.subLabel}`
                     : line.department === "ELECTRONIC_GAMES" && line.operator
@@ -361,7 +361,7 @@ export default function DailyPage() {
                   <button
                     type="button"
                     onClick={() => removeRevenueLine(idx)}
-                    className="text-sm text-red-600 hover:underline"
+                    className="text-sm text-red-600 dark:text-red-400 hover:underline"
                   >
                     Αφαίρεση
                   </button>
@@ -369,11 +369,11 @@ export default function DailyPage() {
               </div>
               {line.department === "RECEPTION_BOWLING" && (
                 <div>
-                  <label className="block text-xs text-neutral-500">SubLabel</label>
+                  <label className="block text-xs text-neutral-500 dark:text-neutral-400">SubLabel</label>
                   <select
                     value={line.subLabel ?? "Regular"}
                     onChange={(e) => updateRevenueLine(idx, { subLabel: e.target.value })}
-                    className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                    className="input-field mt-1 py-1.5 text-sm"
                   >
                     {BOWLING_SUBLABELS.map((s) => (
                       <option key={s} value={s}>{s}</option>
@@ -383,7 +383,7 @@ export default function DailyPage() {
               )}
               {(line.department === "PAIDOTOPOS" || line.department === "BILIARDA") && (
                 <div>
-                  <label className="block text-xs text-neutral-500">Υπεύθυνος</label>
+                  <label className="block text-xs text-neutral-500 dark:text-neutral-400">Υπεύθυνος</label>
                   <select
                     value={line.staffId ?? ""}
                     onChange={(e) => {
@@ -394,7 +394,7 @@ export default function DailyPage() {
                         staffName: s?.name ?? null,
                       });
                     }}
-                    className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                    className="input-field mt-1 py-1.5 text-sm"
                   >
                     <option value="">—</option>
                     {staff.map((s) => (
@@ -404,13 +404,13 @@ export default function DailyPage() {
                 </div>
               )}
               {line.department === "ELECTRONIC_GAMES" && (
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
                   {line.operator ? OPERATOR_LABELS[line.operator] : "—"}
                 </p>
               )}
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-xs text-neutral-500">Σύνολο</label>
+                  <label className="block text-xs text-neutral-500 dark:text-neutral-400">Σύνολο</label>
                   <input
                     type="number"
                     step="0.01"
@@ -420,11 +420,11 @@ export default function DailyPage() {
                       const v = parseFloat(e.target.value) || 0;
                       updateRevenueLine(idx, { total: v, cash: Math.max(0, v - line.pos) });
                     }}
-                    className="w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                    className="input-field py-1.5 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-neutral-500">POS</label>
+                  <label className="block text-xs text-neutral-500 dark:text-neutral-400">POS</label>
                   <input
                     type="number"
                     step="0.01"
@@ -434,18 +434,18 @@ export default function DailyPage() {
                       const v = parseFloat(e.target.value) || 0;
                       updateRevenueLine(idx, { pos: v, cash: Math.max(0, line.total - v) });
                     }}
-                    className="w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                    className="input-field py-1.5 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-neutral-500">Μετρητά</label>
+                  <label className="block text-xs text-neutral-500 dark:text-neutral-400">Μετρητά</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={line.cash.toFixed(2)}
                     readOnly
-                    className="w-full rounded border border-neutral-200 bg-neutral-100 px-2 py-1.5 text-sm"
+                    className="w-full rounded border border-neutral-200 dark:border-neutral-600 bg-neutral-100 dark:bg-neutral-700 px-2 py-1.5 text-sm text-neutral-900 dark:text-neutral-100"
                   />
                 </div>
               </div>
@@ -455,14 +455,14 @@ export default function DailyPage() {
             <button
               type="button"
               onClick={addBowlingLine}
-              className="rounded bg-neutral-200 px-3 py-1.5 text-sm font-medium hover:bg-neutral-300"
+              className="rounded bg-neutral-200 dark:bg-neutral-600 px-3 py-1.5 text-sm font-medium hover:bg-neutral-300 dark:hover:bg-neutral-500 text-neutral-900 dark:text-neutral-100"
             >
               + Γραμμή Bowling
             </button>
             <button
               type="button"
               onClick={addRevenueLine}
-              className="rounded bg-neutral-200 px-3 py-1.5 text-sm font-medium hover:bg-neutral-300"
+              className="rounded bg-neutral-200 dark:bg-neutral-600 px-3 py-1.5 text-sm font-medium hover:bg-neutral-300 dark:hover:bg-neutral-500 text-neutral-900 dark:text-neutral-100"
             >
               + Γραμμή Έσοδων
             </button>
@@ -471,26 +471,26 @@ export default function DailyPage() {
       </section>
 
       {/* SECTION D — PARTIES */}
-      <section className="rounded-lg border bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-medium text-neutral-700">Παιδικά Πάρτυ / Εκδηλώσεις</h2>
+      <section className="card-section">
+        <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Παιδικά Πάρτυ / Εκδηλώσεις</h2>
         <div className="space-y-4">
           {day.partyEvents.map((ev, idx) => (
             <div
               key={ev.id}
-              className="rounded border border-neutral-200 bg-neutral-50/50 p-3 space-y-2"
+              className="rounded border border-neutral-200 dark:border-neutral-600 bg-neutral-50 dark:bg-neutral-800/50 p-3 space-y-2"
             >
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Πάρτυ #{idx + 1}</span>
+                <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Πάρτυ #{idx + 1}</span>
                 <button
                   type="button"
                   onClick={() => removeParty(idx)}
-                  className="text-sm text-red-600 hover:underline"
+                  className="text-sm text-red-600 dark:text-red-400 hover:underline"
                 >
                   Αφαίρεση
                 </button>
               </div>
               <div>
-                <label className="block text-xs text-neutral-500">Υπεύθυνος</label>
+                <label className="block text-xs text-neutral-500 dark:text-neutral-400">Υπεύθυνος</label>
                 <select
                   value={ev.staffId}
                   onChange={(e) => {
@@ -498,7 +498,7 @@ export default function DailyPage() {
                     const s = staff.find((x) => x.id === id);
                     updateParty(idx, { staffId: id, staffName: s?.name ?? "" });
                   }}
-                  className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                  className="input-field mt-1 py-1.5 text-sm"
                 >
                   {staff.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
@@ -506,7 +506,7 @@ export default function DailyPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-neutral-500">Σύνολο</label>
+                <label className="block text-xs text-neutral-500 dark:text-neutral-400">Σύνολο</label>
                 <input
                   type="number"
                   step="0.01"
@@ -516,11 +516,11 @@ export default function DailyPage() {
                     const v = parseFloat(e.target.value) || 0;
                     updateParty(idx, { total: v });
                   }}
-                  className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                  className="input-field mt-1 py-1.5 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs text-neutral-500">Τρόπος πληρωμής</label>
+                <label className="block text-xs text-neutral-500 dark:text-neutral-400">Τρόπος πληρωμής</label>
                 <select
                   value={ev.paymentMethod}
                   onChange={(e) =>
@@ -529,7 +529,7 @@ export default function DailyPage() {
                       posInput: null,
                     })
                   }
-                  className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                  className="input-field mt-1 py-1.5 text-sm"
                 >
                   <option value="CASH">Μετρητά</option>
                   <option value="CARD">Κάρτα</option>
@@ -538,7 +538,7 @@ export default function DailyPage() {
               </div>
               {ev.paymentMethod === "SPLIT" && (
                 <div>
-                  <label className="block text-xs text-neutral-500">POS (μέρος split)</label>
+                  <label className="block text-xs text-neutral-500 dark:text-neutral-400">POS (μέρος split)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -548,17 +548,17 @@ export default function DailyPage() {
                       const v = e.target.value === "" ? null : parseFloat(e.target.value) || 0;
                       updateParty(idx, { posInput: v });
                     }}
-                    className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                    className="input-field mt-1 py-1.5 text-sm"
                   />
                 </div>
               )}
               <div>
-                <label className="block text-xs text-neutral-500">Σημειώσεις</label>
+                <label className="block text-xs text-neutral-500 dark:text-neutral-400">Σημειώσεις</label>
                 <input
                   type="text"
                   value={ev.notes}
                   onChange={(e) => updateParty(idx, { notes: e.target.value })}
-                  className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                  className="input-field mt-1 py-1.5 text-sm"
                 />
               </div>
             </div>
@@ -567,7 +567,7 @@ export default function DailyPage() {
             type="button"
             onClick={addParty}
             disabled={staff.length === 0}
-            className="rounded bg-neutral-200 px-3 py-1.5 text-sm font-medium hover:bg-neutral-300 disabled:opacity-50"
+            className="rounded bg-neutral-200 dark:bg-neutral-600 px-3 py-1.5 text-sm font-medium hover:bg-neutral-300 dark:hover:bg-neutral-500 text-neutral-900 dark:text-neutral-100 disabled:opacity-50"
           >
             + Πάρτυ / Εκδήλωση
           </button>
@@ -575,17 +575,17 @@ export default function DailyPage() {
       </section>
 
       {error && (
-        <div className="rounded border border-red-200 bg-red-50 p-3 text-red-800 text-sm">
+        <div className="rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 p-3 text-red-800 dark:text-red-200 text-sm">
           {error}
         </div>
       )}
 
-      <div className="sticky bottom-0 bg-white/95 py-3 border-t">
+      <div className="sticky bottom-0 bg-white/95 dark:bg-neutral-900/95 py-3 border-t border-neutral-200 dark:border-neutral-700 backdrop-blur">
         <button
           type="button"
           onClick={save}
           disabled={saving}
-          className="w-full rounded bg-neutral-800 py-3 text-white font-medium hover:bg-neutral-700 disabled:opacity-50"
+          className="btn-primary w-full py-3"
         >
           {saving ? "Αποθήκευση..." : "Αποθήκευση"}
         </button>

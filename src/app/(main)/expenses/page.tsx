@@ -112,127 +112,70 @@ export default function ExpensesPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <h1 className="text-lg font-semibold">Έξοδα</h1>
+      <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Έξοδα</h1>
 
-      <section className="rounded-lg border bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-medium text-neutral-700">Νέο έξοδο</h2>
+      <section className="card-section">
+        <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Νέο έξοδο</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-sm text-neutral-600">Ημερομηνία</label>
-            <input
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
-              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
-              required
-            />
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Ημερομηνία</label>
+            <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="input-field mt-1" required />
           </div>
           <div>
-            <label className="block text-sm text-neutral-600">Αριθμός τιμολογίου</label>
-            <input
-              type="text"
-              value={form.invoiceNumber}
-              onChange={(e) => setForm((p) => ({ ...p, invoiceNumber: e.target.value }))}
-              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
-            />
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Αριθμός τιμολογίου</label>
+            <input type="text" value={form.invoiceNumber} onChange={(e) => setForm((p) => ({ ...p, invoiceNumber: e.target.value }))} className="input-field mt-1" />
           </div>
           <div>
-            <label className="block text-sm text-neutral-600">Προμηθευτής</label>
-            <select
-              value={form.supplierId}
-              onChange={(e) => onSupplierChange(e.target.value)}
-              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
-            >
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Προμηθευτής</label>
+            <select value={form.supplierId} onChange={(e) => onSupplierChange(e.target.value)} className="input-field mt-1">
               <option value="">—</option>
-              {suppliers.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
+              {suppliers.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
             </select>
           </div>
           <div>
-            <label className="block text-sm text-neutral-600">Κατηγορία</label>
-            <input
-              type="text"
-              value={form.category}
-              onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-              placeholder="Αυτόματο από προμηθευτή, επεξεργάσιμο"
-              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
-            />
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Κατηγορία</label>
+            <input type="text" value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} placeholder="Αυτόματο από προμηθευτή, επεξεργάσιμο" className="input-field mt-1" />
           </div>
           <div>
-            <label className="block text-sm text-neutral-600">Ποσό</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.amount}
-              onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
-              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
-              required
-            />
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Ποσό</label>
+            <input type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} className="input-field mt-1" required />
           </div>
           <div>
-            <label className="block text-sm text-neutral-600">Τρόπος πληρωμής</label>
-            <input
-              type="text"
-              value={form.paymentMethod}
-              onChange={(e) => setForm((p) => ({ ...p, paymentMethod: e.target.value }))}
-              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
-            />
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Τρόπος πληρωμής</label>
+            <input type="text" value={form.paymentMethod} onChange={(e) => setForm((p) => ({ ...p, paymentMethod: e.target.value }))} className="input-field mt-1" />
           </div>
           <div>
-            <label className="block text-sm text-neutral-600">Σημειώσεις</label>
-            <input
-              type="text"
-              value={form.notes}
-              onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
-            />
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Σημειώσεις</label>
+            <input type="text" value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className="input-field mt-1" />
           </div>
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full rounded bg-neutral-800 py-2 text-white font-medium hover:bg-neutral-700 disabled:opacity-50"
-          >
+          <button type="submit" disabled={saving} className="btn-primary w-full">
             {saving ? "..." : "Προσθήκη"}
           </button>
         </form>
       </section>
 
-      <section className="rounded-lg border bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-medium text-neutral-700">Φίλτρο</h2>
+      <section className="card-section">
+        <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Φίλτρο</h2>
         <div className="flex gap-2 flex-wrap">
-          <input
-            type="date"
-            value={filterFrom}
-            onChange={(e) => setFilterFrom(e.target.value)}
-            className="rounded border border-neutral-300 px-3 py-2"
-          />
-          <input
-            type="date"
-            value={filterTo}
-            onChange={(e) => setFilterTo(e.target.value)}
-            className="rounded border border-neutral-300 px-3 py-2"
-          />
+          <input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="input-field" />
+          <input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="input-field" />
         </div>
       </section>
 
-      <section className="rounded-lg border bg-white shadow-sm overflow-hidden">
-        <h2 className="p-3 font-medium text-neutral-700 border-b">Κατάλογος</h2>
+      <section className="card-section overflow-hidden p-0">
+        <h2 className="p-3 font-medium text-neutral-700 dark:text-neutral-300 border-b border-neutral-200 dark:border-neutral-700">Κατάλογος</h2>
         {loading ? (
-          <p className="p-4 text-neutral-500">Φόρτωση...</p>
+          <p className="p-4 text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
         ) : expenses.length === 0 ? (
-          <p className="p-4 text-neutral-500">Δεν υπάρχουν έξοδα</p>
+          <p className="p-4 text-neutral-500 dark:text-neutral-400">Δεν υπάρχουν έξοδα</p>
         ) : (
-          <ul className="divide-y">
+          <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
             {expenses.map((e) => (
               <li key={e.id} className="p-3 flex justify-between items-start gap-2">
                 <div className="min-w-0">
-                  <p className="font-medium text-neutral-900">{e.date}</p>
-                  <p className="text-sm text-neutral-600">
-                    {e.supplierName ?? e.category} — {e.amount.toFixed(2)} €
-                  </p>
-                  {e.notes && <p className="text-xs text-neutral-500">{e.notes}</p>}
+                  <p className="font-medium text-neutral-900 dark:text-neutral-100">{e.date}</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400">{e.supplierName ?? e.category} — {e.amount.toFixed(2)} €</p>
+                  {e.notes && <p className="text-xs text-neutral-500 dark:text-neutral-400">{e.notes}</p>}
                 </div>
               </li>
             ))}

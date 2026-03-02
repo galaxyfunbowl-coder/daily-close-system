@@ -5,12 +5,22 @@
 :root {
   --background: #fafafa;
   --foreground: #171717;
+  --card: #ffffff;
+  --card-border: #e5e5e5;
+  --input-bg: #ffffff;
+  --input-border: #d4d4d4;
+  --input-text: #171717;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f0f0f;
+    --foreground: #f5f5f5;
+    --card: #1a1a1a;
+    --card-border: #404040;
+    --input-bg: #262626;
+    --input-border: #525252;
+    --input-text: #f5f5f5;
   }
 }
 
@@ -18,6 +28,30 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: system-ui, sans-serif;
+}
+
+@layer base {
+  input, select, textarea, button {
+    color-scheme: light;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  input, select, textarea {
+    color-scheme: dark;
+  }
+}
+
+@layer components {
+  .input-field {
+    @apply w-full rounded border px-3 py-2 bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500;
+  }
+  .card-section {
+    @apply rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4 shadow-sm;
+  }
+  .btn-primary {
+    @apply rounded bg-neutral-800 dark:bg-neutral-100 py-2 text-white dark:text-neutral-900 font-medium hover:bg-neutral-700 dark:hover:bg-neutral-200 disabled:opacity-50;
+  }
 }
 
 @layer utilities {

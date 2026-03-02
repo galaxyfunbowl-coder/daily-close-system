@@ -36,12 +36,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-neutral-100">
-      <div className="w-full max-w-xs rounded-lg border bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-semibold text-center mb-4">Daily Closing</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-neutral-100 dark:bg-neutral-950">
+      <div className="card-section w-full max-w-xs p-6">
+        <h1 className="text-xl font-semibold text-center mb-4 text-neutral-900 dark:text-neutral-100">Daily Closing</h1>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-neutral-700 mb-1">
+            <label htmlFor="username" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
               Username
             </label>
             <input
@@ -49,13 +49,13 @@ export default function LoginPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded border border-neutral-300 px-3 py-2 text-neutral-900"
+              className="input-field"
               required
               autoComplete="username"
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
               Password
             </label>
             <input
@@ -63,21 +63,21 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded border border-neutral-300 px-3 py-2 text-neutral-900"
+              className="input-field"
               required
               autoComplete="current-password"
             />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded bg-neutral-800 py-2 text-white font-medium hover:bg-neutral-700 disabled:opacity-50"
+            className="btn-primary w-full"
           >
             {loading ? "..." : "Login"}
           </button>
         </form>
-        <p className="mt-3 text-center text-sm text-neutral-500">
+        <p className="mt-3 text-center text-sm text-neutral-500 dark:text-neutral-400">
           Local only · No cloud
         </p>
       </div>

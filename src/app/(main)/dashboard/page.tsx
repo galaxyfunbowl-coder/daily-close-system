@@ -75,42 +75,28 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold">Dashboard</h1>
-        <input
-          type="month"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          className="rounded border border-neutral-300 px-3 py-2"
-        />
+        <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Dashboard</h1>
+        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="input-field" />
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={exportCsv}
-          className="rounded bg-neutral-200 px-3 py-2 text-sm font-medium hover:bg-neutral-300"
-        >
+        <button type="button" onClick={exportCsv} className="rounded bg-neutral-200 dark:bg-neutral-600 px-3 py-2 text-sm font-medium hover:bg-neutral-300 dark:hover:bg-neutral-500 text-neutral-900 dark:text-neutral-100">
           Export μήνα σε CSV
         </button>
-        <button
-          type="button"
-          onClick={backup}
-          disabled={backupLoading}
-          className="rounded bg-neutral-200 px-3 py-2 text-sm font-medium hover:bg-neutral-300 disabled:opacity-50"
-        >
+        <button type="button" onClick={backup} disabled={backupLoading} className="rounded bg-neutral-200 dark:bg-neutral-600 px-3 py-2 text-sm font-medium hover:bg-neutral-300 dark:hover:bg-neutral-500 text-neutral-900 dark:text-neutral-100 disabled:opacity-50">
           {backupLoading ? "..." : "Backup βάσης"}
         </button>
       </div>
 
       {loading ? (
-        <p className="text-neutral-500">Φόρτωση...</p>
+        <p className="text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
       ) : !data ? (
-        <p className="text-neutral-500">Δεν βρέθηκαν δεδομένα</p>
+        <p className="text-neutral-500 dark:text-neutral-400">Δεν βρέθηκαν δεδομένα</p>
       ) : (
         <>
-          <section className="rounded-lg border bg-white p-4 shadow-sm">
-            <h2 className="mb-3 font-medium text-neutral-700">Σύνολα μήνα</h2>
-            <ul className="space-y-1 text-sm">
+          <section className="card-section">
+            <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Σύνολα μήνα</h2>
+            <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
               <li><strong>Έσοδα:</strong> {data.totalRevenue.toFixed(2)} €</li>
               <li><strong>Έξοδα:</strong> {data.totalExpenses.toFixed(2)} €</li>
               <li><strong>Καθαρά:</strong> {data.netResult.toFixed(2)} €</li>
@@ -120,12 +106,12 @@ export default function DashboardPage() {
             </ul>
           </section>
 
-          <section className="rounded-lg border bg-white p-4 shadow-sm">
-            <h2 className="mb-3 font-medium text-neutral-700">Reception-Bowling ανά SubLabel</h2>
+          <section className="card-section">
+            <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Reception-Bowling ανά SubLabel</h2>
             {Object.keys(data.bowlingBySubLabel).length === 0 ? (
-              <p className="text-neutral-500 text-sm">—</p>
+              <p className="text-neutral-500 dark:text-neutral-400 text-sm">—</p>
             ) : (
-              <ul className="space-y-1 text-sm">
+              <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
                 {Object.entries(data.bowlingBySubLabel).map(([k, v]) => (
                   <li key={k}>{k}: {v.toFixed(2)} €</li>
                 ))}
@@ -133,32 +119,30 @@ export default function DashboardPage() {
             )}
           </section>
 
-          <section className="rounded-lg border bg-white p-4 shadow-sm">
-            <h2 className="mb-3 font-medium text-neutral-700">Ηλεκτρονικά ανά Operator</h2>
+          <section className="card-section">
+            <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Ηλεκτρονικά ανά Operator</h2>
             {Object.keys(data.electronicByOperator).length === 0 ? (
-              <p className="text-neutral-500 text-sm">—</p>
+              <p className="text-neutral-500 dark:text-neutral-400 text-sm">—</p>
             ) : (
-              <ul className="space-y-1 text-sm">
+              <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
                 {Object.entries(data.electronicByOperator).map(([k, v]) => (
-                  <li key={k}>
-                    {OPERATOR_LABELS[k as ElectronicOperator] ?? k}: {v.toFixed(2)} €
-                  </li>
+                  <li key={k}>{OPERATOR_LABELS[k as ElectronicOperator] ?? k}: {v.toFixed(2)} €</li>
                 ))}
               </ul>
             )}
           </section>
 
-          <section className="rounded-lg border bg-white p-4 shadow-sm">
-            <h2 className="mb-3 font-medium text-neutral-700">Παιδότοπος / Μπιλιάρδα</h2>
-            <ul className="space-y-1 text-sm">
+          <section className="card-section">
+            <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Παιδότοπος / Μπιλιάρδα</h2>
+            <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
               <li>Παιδότοπος: {data.playgroundTotal.toFixed(2)} €</li>
               <li>Μπιλιάρδα: {data.billiardsTotal.toFixed(2)} €</li>
             </ul>
           </section>
 
-          <section className="rounded-lg border bg-white p-4 shadow-sm">
-            <h2 className="mb-3 font-medium text-neutral-700">Σύγκριση YoY (ίδιος μήνας πέρυσι)</h2>
-            <ul className="space-y-1 text-sm">
+          <section className="card-section">
+            <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Σύγκριση YoY (ίδιος μήνας πέρυσι)</h2>
+            <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
               <li>Έσοδα πέρυσι: {data.yoy.revenue.toFixed(2)} €</li>
               <li>Έξοδα πέρυσι: {data.yoy.expenses.toFixed(2)} €</li>
               <li>Καθαρά πέρυσι: {data.yoy.net.toFixed(2)} €</li>
@@ -167,9 +151,9 @@ export default function DashboardPage() {
           </section>
 
           {data.posDiffDays.length > 0 && (
-            <section className="rounded-lg border-2 border-red-200 bg-red-50 p-4">
-              <h2 className="mb-3 font-medium text-red-800">Έλεγχος POS — ημέρες με διαφορά</h2>
-              <ul className="space-y-1 text-sm text-red-800">
+            <section className="rounded-lg border-2 border-red-500 dark:border-red-600 bg-red-50 dark:bg-red-950 p-4">
+              <h2 className="mb-3 font-medium text-red-800 dark:text-red-200">Έλεγχος POS — ημέρες με διαφορά</h2>
+              <ul className="space-y-1 text-sm text-red-800 dark:text-red-200">
                 {data.posDiffDays.map(({ date, diff }) => (
                   <li key={date}>{date}: διαφορά {diff.toFixed(2)} €</li>
                 ))}

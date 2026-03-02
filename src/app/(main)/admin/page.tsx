@@ -38,9 +38,9 @@ export default function AdminPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <h1 className="text-lg font-semibold">Διαχείριση</h1>
+      <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Διαχείριση</h1>
 
-      <div className="flex gap-2 border-b">
+      <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-700">
         {(["staff", "suppliers", "holidays", "closures"] as const).map((t) => (
           <button
             key={t}
@@ -48,8 +48,8 @@ export default function AdminPage() {
             onClick={() => setTab(t)}
             className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
               tab === t
-                ? "border-neutral-800 text-neutral-900"
-                : "border-transparent text-neutral-600 hover:text-neutral-900"
+                ? "border-neutral-800 dark:border-neutral-200 text-neutral-900 dark:text-neutral-100"
+                : "border-transparent text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
             }`}
           >
             {t === "staff" && "Προσωπικό"}
@@ -120,35 +120,19 @@ function StaffSection({
   }
 
   return (
-    <section className="rounded-lg border bg-white p-4 shadow-sm space-y-4">
+    <section className="card-section space-y-4">
       <form onSubmit={addStaff} className="flex gap-2">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Όνομα προσωπικού"
-          className="flex-1 rounded border border-neutral-300 px-3 py-2"
-        />
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded bg-neutral-800 px-4 py-2 text-white text-sm font-medium disabled:opacity-50"
-        >
-          Προσθήκη
-        </button>
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Όνομα προσωπικού" className="input-field flex-1" />
+        <button type="submit" disabled={saving} className="btn-primary px-4 text-sm">Προσθήκη</button>
       </form>
       {loading ? (
-        <p className="text-neutral-500">Φόρτωση...</p>
+        <p className="text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
       ) : (
-        <ul className="divide-y">
+        <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
           {staff.map((s) => (
             <li key={s.id} className="py-2 flex justify-between items-center">
-              <span className={s.active ? "" : "text-neutral-500 line-through"}>{s.name}</span>
-              <button
-                type="button"
-                onClick={() => toggleActive(s)}
-                className="text-sm text-neutral-600 hover:underline"
-              >
+              <span className={s.active ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-500 dark:text-neutral-400 line-through"}>{s.name}</span>
+              <button type="button" onClick={() => toggleActive(s)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">
                 {s.active ? "Απενεργοποίηση" : "Ενεργοποίηση"}
               </button>
             </li>
@@ -196,38 +180,20 @@ function SuppliersSection({
   }
 
   return (
-    <section className="rounded-lg border bg-white p-4 shadow-sm space-y-4">
+    <section className="card-section space-y-4">
       <form onSubmit={addSupplier} className="space-y-2">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Όνομα προμηθευτή"
-          className="w-full rounded border border-neutral-300 px-3 py-2"
-        />
-        <input
-          type="text"
-          value={defaultCategory}
-          onChange={(e) => setDefaultCategory(e.target.value)}
-          placeholder="Προεπιλεγμένη κατηγορία"
-          className="w-full rounded border border-neutral-300 px-3 py-2"
-        />
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded bg-neutral-800 px-4 py-2 text-white text-sm font-medium disabled:opacity-50"
-        >
-          Προσθήκη
-        </button>
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Όνομα προμηθευτή" className="input-field" />
+        <input type="text" value={defaultCategory} onChange={(e) => setDefaultCategory(e.target.value)} placeholder="Προεπιλεγμένη κατηγορία" className="input-field" />
+        <button type="submit" disabled={saving} className="btn-primary px-4 text-sm">Προσθήκη</button>
       </form>
       {loading ? (
-        <p className="text-neutral-500">Φόρτωση...</p>
+        <p className="text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
       ) : (
-        <ul className="divide-y">
+        <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
           {suppliers.map((s) => (
             <li key={s.id} className="py-2">
-              <span className="font-medium">{s.name}</span>
-              <span className="text-neutral-500 text-sm"> — {s.defaultCategory}</span>
+              <span className="font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
+              <span className="text-neutral-500 dark:text-neutral-400 text-sm"> — {s.defaultCategory}</span>
             </li>
           ))}
         </ul>
@@ -279,43 +245,20 @@ function HolidaysSection({
   }
 
   return (
-    <section className="rounded-lg border bg-white p-4 shadow-sm space-y-4">
+    <section className="card-section space-y-4">
       <form onSubmit={addHoliday} className="space-y-2">
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full rounded border border-neutral-300 px-3 py-2"
-        />
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Όνομα αργίας"
-          className="w-full rounded border border-neutral-300 px-3 py-2"
-        />
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded bg-neutral-800 px-4 py-2 text-white text-sm font-medium disabled:opacity-50"
-        >
-          Προσθήκη
-        </button>
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input-field" />
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Όνομα αργίας" className="input-field" />
+        <button type="submit" disabled={saving} className="btn-primary px-4 text-sm">Προσθήκη</button>
       </form>
       {loading ? (
-        <p className="text-neutral-500">Φόρτωση...</p>
+        <p className="text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
       ) : (
-        <ul className="divide-y">
+        <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
           {holidays.map((h) => (
-            <li key={h.id} className="py-2 flex justify-between items-center">
+            <li key={h.id} className="py-2 flex justify-between items-center text-neutral-900 dark:text-neutral-100">
               <span>{h.date} — {h.name}</span>
-              <button
-                type="button"
-                onClick={() => deleteHoliday(h.id)}
-                className="text-sm text-red-600 hover:underline"
-              >
-                Διαγραφή
-              </button>
+              <button type="button" onClick={() => deleteHoliday(h.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">Διαγραφή</button>
             </li>
           ))}
         </ul>
@@ -367,43 +310,20 @@ function ClosuresSection({
   }
 
   return (
-    <section className="rounded-lg border bg-white p-4 shadow-sm space-y-4">
+    <section className="card-section space-y-4">
       <form onSubmit={addClosure} className="space-y-2">
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full rounded border border-neutral-300 px-3 py-2"
-        />
-        <input
-          type="text"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="Αιτία κλεισίματος"
-          className="w-full rounded border border-neutral-300 px-3 py-2"
-        />
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded bg-neutral-800 px-4 py-2 text-white text-sm font-medium disabled:opacity-50"
-        >
-          Προσθήκη
-        </button>
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input-field" />
+        <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Αιτία κλεισίματος" className="input-field" />
+        <button type="submit" disabled={saving} className="btn-primary px-4 text-sm">Προσθήκη</button>
       </form>
       {loading ? (
-        <p className="text-neutral-500">Φόρτωση...</p>
+        <p className="text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
       ) : (
-        <ul className="divide-y">
+        <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
           {closures.map((c) => (
-            <li key={c.id} className="py-2 flex justify-between items-center">
+            <li key={c.id} className="py-2 flex justify-between items-center text-neutral-900 dark:text-neutral-100">
               <span>{c.date} — {c.reason}</span>
-              <button
-                type="button"
-                onClick={() => deleteClosure(c.id)}
-                className="text-sm text-red-600 hover:underline"
-              >
-                Διαγραφή
-              </button>
+              <button type="button" onClick={() => deleteClosure(c.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">Διαγραφή</button>
             </li>
           ))}
         </ul>
