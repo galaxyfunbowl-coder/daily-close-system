@@ -29,11 +29,23 @@ function currentMonth(): string {
   return new Date().toISOString().slice(0, 7);
 }
 
+const MONTH_NAMES = ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"];
+
+function getYearMonth(ym: string): { year: number; monthNum: number } {
+  const [y, m] = ym.split("-").map(Number);
+  return { year: y, monthNum: m };
+}
+
 export default function DashboardPage() {
   const [month, setMonth] = useState(currentMonth);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [backupLoading, setBackupLoading] = useState(false);
+
+  const { year, monthNum } = getYearMonth(month);
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2];
+  const setYearMonth = (y: number, m: number) => setMonth(`${y}-${String(m).padStart(2, "0")}`);
 
   const load = useCallback(async (m: string) => {
     setLoading(true);
@@ -76,7 +88,28 @@ export default function DashboardPage() {
     <div className="mx-auto max-w-lg space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Dashboard</h1>
-        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="input-field" />
+        <div className="flex gap-2 items-center">
+          <select
+            value={monthNum}
+            onChange={(e) => setYearMonth(year, Number(e.target.value))}
+            className="input-field py-2 text-sm w-auto min-w-[140px]"
+            title="Επιλογή μήνα"
+          >
+            {MONTH_NAMES.map((name, i) => (
+              <option key={name} value={i + 1}>{name}</option>
+            ))}
+          </select>
+          <select
+            value={year}
+            onChange={(e) => setYearMonth(Number(e.target.value), monthNum)}
+            className="input-field py-2 text-sm w-auto min-w-[100px]"
+            title="Επιλογή έτους"
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -102,8 +135,6 @@ export default function DashboardPage() {
               <li><strong>Καθαρά:</strong> {data.netResult.toFixed(2)} €</li>
               <li><strong>POS σύνολο (από Z):</strong> {data.totalPOS.toFixed(2)} €</li>
               <li><strong>Μετρητά σύνολο (από Z):</strong> {data.totalCash.toFixed(2)} €</li>
-              <li><strong>Έσοδα πάρτυ:</strong> {data.partyRevenue.toFixed(2)} €</li>
-              <li><strong>Αριθμός πάρτυ:</strong> {data.partyCount}</li>
             </ul>
           </section>
 
@@ -138,6 +169,14 @@ export default function DashboardPage() {
             <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
               <li>Παιδότοπος: {data.playgroundTotal.toFixed(2)} €</li>
               <li>Μπιλιάρδα: {data.billiardsTotal.toFixed(2)} €</li>
+            </ul>
+          </section>
+
+          <section className="card-section">
+            <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Πάρτυ — Εκδηλώσεις</h2>
+            <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
+              <li>Έσοδα πάρτυ: {data.partyRevenue.toFixed(2)} €</li>
+              <li>Αριθμός πάρτυ: {data.partyCount}</li>
             </ul>
           </section>
 

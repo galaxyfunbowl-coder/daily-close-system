@@ -1,0 +1,15 @@
+---
+description: After code changes, always build and push to GitHub
+alwaysApply: true
+---
+
+# Build and push after changes
+
+When you make code changes in this project (daily-closing-app):
+
+1. **Build**: Run `npm run build` in the project root. If the build fails, fix the errors before continuing.
+2. **Git**: Stage all changes (`git add -A`), commit with a short descriptive message, and push to `origin main` (`git push origin main`).
+
+Do this **without the user having to ask**. Skip only if the user explicitly says not to (e.g. "don't push" or "don't commit yet").
+
+Do not kill the dev server or restart it unless the user asks.
