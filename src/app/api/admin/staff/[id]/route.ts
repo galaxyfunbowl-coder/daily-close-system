@@ -22,3 +22,25 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAuth();
+  if (auth) return auth;
+  const id = (await params).id;
+  try {
+    await prisma.staff.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (msg.includes("Foreign key") || msg.includes("partyEvents") || msg.includes("PartyEvent")) {
+      return NextResponse.json(
+        { error: "Δεν μπορεί να διαγραφεί: υπάρχουν ημέρες/πάρτυ που το χρησιμοποιούν." },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+}

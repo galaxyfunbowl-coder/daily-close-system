@@ -27,6 +27,11 @@ export async function GET(request: NextRequest) {
     where: { date: { gte: from, lte: to } },
   });
 
+  const payrollRows = await prisma.staffMonthlySalary.findMany({
+    where: { month },
+  });
+  const payrollTotal = payrollRows.reduce((s, r) => s + r.amount, 0);
+
   let totalRevenue = 0;
   let totalPOS = 0;
   let totalCash = 0;
@@ -62,7 +67,8 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  const expenseTotal = expenses.reduce((s, e) => s + e.amount, 0);
+  const totalExpenses = expenseTotal + payrollTotal;
   const netResult = totalRevenue - totalExpenses;
 
   const prevYear = year - 1;
@@ -93,6 +99,7 @@ export async function GET(request: NextRequest) {
     month,
     totalRevenue,
     totalExpenses,
+    payrollTotal,
     netResult,
     totalPOS,
     totalCash,

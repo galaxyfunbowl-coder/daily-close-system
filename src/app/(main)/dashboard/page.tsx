@@ -8,6 +8,7 @@ type DashboardData = {
   month: string;
   totalRevenue: number;
   totalExpenses: number;
+  payrollTotal: number;
   netResult: number;
   totalPOS: number;
   totalCash: number;
@@ -132,6 +133,9 @@ export default function DashboardPage() {
             <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
               <li><strong>Έσοδα:</strong> {data.totalRevenue.toFixed(2)} €</li>
               <li><strong>Έξοδα:</strong> {data.totalExpenses.toFixed(2)} €</li>
+              {data.payrollTotal > 0 && (
+                <li className="text-neutral-600 dark:text-neutral-400">— Μισθοδοσία: {data.payrollTotal.toFixed(2)} €</li>
+              )}
               <li><strong>Καθαρά:</strong> {data.netResult.toFixed(2)} €</li>
               <li><strong>POS σύνολο (από Z):</strong> {data.totalPOS.toFixed(2)} €</li>
               <li><strong>Μετρητά σύνολο (από Z):</strong> {data.totalCash.toFixed(2)} €</li>

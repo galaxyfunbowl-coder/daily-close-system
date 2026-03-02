@@ -7,7 +7,7 @@ type Supplier = { id: string; name: string; defaultCategory: string };
 type Holiday = { id: string; date: string; name: string };
 type Closure = { id: string; date: string; reason: string };
 
-type Tab = "staff" | "suppliers" | "holidays" | "closures";
+type Tab = "staff" | "suppliers" | "payroll" | "holidays" | "closures";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("staff");
@@ -40,8 +40,8 @@ export default function AdminPage() {
     <div className="mx-auto max-w-lg space-y-4">
       <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Διαχείριση</h1>
 
-      <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-700">
-        {(["staff", "suppliers", "holidays", "closures"] as const).map((t) => (
+      <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-700 flex-wrap">
+        {(["staff", "suppliers", "payroll", "holidays", "closures"] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -54,6 +54,7 @@ export default function AdminPage() {
           >
             {t === "staff" && "Προσωπικό"}
             {t === "suppliers" && "Προμηθευτές"}
+            {t === "payroll" && "Μισθοδοσία"}
             {t === "holidays" && "Αργίες"}
             {t === "closures" && "Κλεισίματα"}
           </button>
@@ -66,6 +67,9 @@ export default function AdminPage() {
       {tab === "suppliers" && (
         <SuppliersSection suppliers={suppliers} loading={loading} onSaved={load} />
       )}
+      {tab === "payroll" && (
+        <PayrollSection staff={staff} />
+      )}
       {tab === "holidays" && (
         <HolidaysSection holidays={holidays} loading={loading} onSaved={load} />
       )}
@@ -75,6 +79,8 @@ export default function AdminPage() {
     </div>
   );
 }
+
+const STAFF_ROLES = ["SERVER", "ADMIN"] as const;
 
 function StaffSection({
   staff,
@@ -87,6 +93,46 @@ function StaffSection({
 }) {
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRole, setEditRole] = useState<string>("SERVER");
+  const [editActive, setEditActive] = useState(true);
+
+  function startEdit(s: Staff) {
+    setEditingId(s.id);
+    setEditName(s.name);
+    setEditRole(s.role);
+    setEditActive(s.active);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function saveEdit() {
+    if (!editingId || !editName.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/staff/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName.trim(),
+          role: editRole,
+          active: editActive,
+        }),
+      });
+      if (res.ok) {
+        onSaved();
+        cancelEdit();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error ?? "Σφάλμα");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function addStaff(e: React.FormEvent) {
     e.preventDefault();
@@ -110,13 +156,14 @@ function StaffSection({
     }
   }
 
-  async function toggleActive(s: Staff) {
-    const res = await fetch(`/api/admin/staff/${s.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !s.active }),
-    });
+  async function deleteStaff(id: string) {
+    if (!confirm("Διαγραφή μέλους προσωπικού;")) return;
+    const res = await fetch(`/api/admin/staff/${id}`, { method: "DELETE" });
     if (res.ok) onSaved();
+    else {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error ?? "Σφάλμα");
+    }
   }
 
   return (
@@ -130,11 +177,35 @@ function StaffSection({
       ) : (
         <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
           {staff.map((s) => (
-            <li key={s.id} className="py-2 flex justify-between items-center">
-              <span className={s.active ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-500 dark:text-neutral-400 line-through"}>{s.name}</span>
-              <button type="button" onClick={() => toggleActive(s)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">
-                {s.active ? "Απενεργοποίηση" : "Ενεργοποίηση"}
-              </button>
+            <li key={s.id} className="py-2">
+              {editingId === s.id ? (
+                <div className="space-y-2">
+                  <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Όνομα" className="input-field w-full" />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select value={editRole} onChange={(e) => setEditRole(e.target.value)} className="input-field text-sm">
+                      {STAFF_ROLES.map((r) => (
+                        <option key={r} value={r}>{r === "SERVER" ? "Server" : "Admin"}</option>
+                      ))}
+                    </select>
+                    <label className="flex items-center gap-1 text-sm text-neutral-700 dark:text-neutral-300">
+                      <input type="checkbox" checked={editActive} onChange={(e) => setEditActive(e.target.checked)} />
+                      Ενεργό
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={saveEdit} disabled={saving || !editName.trim()} className="btn-primary text-sm px-3">Αποθήκευση</button>
+                    <button type="button" onClick={cancelEdit} disabled={saving} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Ακύρωση</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center flex-wrap gap-1">
+                  <span className={s.active ? "text-neutral-900 dark:text-neutral-100 font-medium" : "text-neutral-500 dark:text-neutral-400 line-through"}>{s.name}</span>
+                  <span className="flex gap-2">
+                    <button type="button" onClick={() => startEdit(s)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Επεξεργασία</button>
+                    <button type="button" onClick={() => deleteStaff(s.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">Διαγραφή</button>
+                  </span>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -258,6 +329,145 @@ function SuppliersSection({
             </li>
           ))}
         </ul>
+      )}
+    </section>
+  );
+}
+
+const MONTH_NAMES = ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"];
+
+function currentMonthStr(): string {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function PayrollSection({ staff }: { staff: Staff[] }) {
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2];
+  const [month, setMonth] = useState(currentMonthStr);
+  const [salaries, setSalaries] = useState<{ staffId: string; staffName: string; amount: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [y, m] = month.split("-").map(Number);
+
+  const loadSalaries = useCallback(async (mStr: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/staff-salaries?month=${mStr}`);
+      if (res.ok) {
+        const d = await res.json();
+        setSalaries(Array.isArray(d.salaries) ? d.salaries : []);
+      } else {
+        setSalaries([]);
+      }
+    } catch {
+      setSalaries([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSalaries(month);
+  }, [month, loadSalaries]);
+
+  const setYearMonth = (year: number, monthNum: number) => {
+    setMonth(`${year}-${String(monthNum).padStart(2, "0")}`);
+  };
+
+  function setAmount(staffId: string, value: number) {
+    setSalaries((prev) => {
+      const next = prev.map((r) => (r.staffId === staffId ? { ...r, amount: value } : r));
+      const found = next.some((r) => r.staffId === staffId);
+      if (!found) {
+        const staffMember = staff.find((s) => s.id === staffId);
+        next.push({ staffId, staffName: staffMember?.name ?? "", amount: value });
+      }
+      return next;
+    });
+  }
+
+  const rows = staff.length > 0
+    ? staff.map((s) => ({
+        staffId: s.id,
+        staffName: s.name,
+        amount: salaries.find((r) => r.staffId === s.id)?.amount ?? 0,
+      }))
+    : salaries;
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/staff-salaries", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          month,
+          salaries: rows.map((r) => ({ staffId: r.staffId, amount: r.amount })),
+        }),
+      });
+      if (res.ok) {
+        loadSalaries(month);
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error ?? "Σφάλμα");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const total = rows.reduce((sum, r) => sum + r.amount, 0);
+
+  return (
+    <section className="card-section space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={m}
+          onChange={(e) => setYearMonth(y, Number(e.target.value))}
+          className="input-field text-sm w-auto min-w-[140px]"
+        >
+          {MONTH_NAMES.map((name, i) => (
+            <option key={name} value={i + 1}>{name}</option>
+          ))}
+        </select>
+        <select
+          value={y}
+          onChange={(e) => setYearMonth(Number(e.target.value), m)}
+          className="input-field text-sm w-auto min-w-[100px]"
+        >
+          {years.map((yr) => (
+            <option key={yr} value={yr}>{yr}</option>
+          ))}
+        </select>
+      </div>
+      {loading ? (
+        <p className="text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
+      ) : (
+        <>
+          <ul className="divide-y divide-neutral-200 dark:divide-neutral-700 space-y-2">
+            {rows.map((r) => (
+              <li key={r.staffId} className="py-2 flex justify-between items-center gap-2">
+                <span className="text-neutral-900 dark:text-neutral-100 font-medium truncate">{r.staffName}</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={r.amount || ""}
+                  onChange={(e) => setAmount(r.staffId, e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
+                  placeholder="€"
+                  className="input-field w-28 text-right"
+                />
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            Σύνολο μισθοδοσίας: <strong>{total.toFixed(2)} €</strong>
+          </p>
+          <button type="button" onClick={save} disabled={saving} className="btn-primary text-sm px-4">
+            {saving ? "Αποθήκευση..." : "Αποθήκευση"}
+          </button>
+        </>
       )}
     </section>
   );

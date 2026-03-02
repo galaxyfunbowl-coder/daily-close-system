@@ -33,7 +33,7 @@ model RevenueLine {
   subLabel     String?
   subLabelInfo String?
   staffId      String?
-  staff        Staff?              @relation(fields: [staffId], references: [id])
+  staff        Staff?              @relation(fields: [staffId], references: [id], onDelete: SetNull)
   operator     ElectronicOperator?
   total        Float
   pos          Float
@@ -67,12 +67,22 @@ model Expense {
 }
 
 model Staff {
-  id           String        @id @default(cuid())
-  name         String
-  role         StaffRole     @default(SERVER)
-  active       Boolean       @default(true)
-  revenueLines RevenueLine[]
-  partyEvents  PartyEvent[]
+  id                 String               @id @default(cuid())
+  name               String
+  role               StaffRole            @default(SERVER)
+  active             Boolean              @default(true)
+  revenueLines       RevenueLine[]
+  partyEvents        PartyEvent[]
+  monthlySalaries    StaffMonthlySalary[]
+}
+
+model StaffMonthlySalary {
+  id        String  @id @default(cuid())
+  staffId   String
+  staff     Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  month     String  // YYYY-MM
+  amount    Float
+  @@unique([staffId, month])
 }
 
 model Supplier {
