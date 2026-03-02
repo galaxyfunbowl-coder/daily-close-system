@@ -20,6 +20,8 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const PAYMENT_METHODS = ["Μετρητά", "Κάρτα", "Τραπεζική μεταφορά"] as const;
+
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -112,16 +114,19 @@ export default function ExpensesPage() {
     }));
   }
 
-  function startEdit(e: Expense) {
-    setEditingId(e.id);
+  function startEdit(exp: Expense) {
+    setEditingId(exp.id);
+    const pm = PAYMENT_METHODS.includes(exp.paymentMethod as (typeof PAYMENT_METHODS)[number])
+      ? exp.paymentMethod
+      : "Μετρητά";
     setEditForm({
-      date: e.date,
-      invoiceNumber: e.invoiceNumber,
-      supplierId: e.supplierId ?? "",
-      category: e.category,
-      amount: String(e.amount),
-      paymentMethod: e.paymentMethod,
-      notes: e.notes,
+      date: exp.date,
+      invoiceNumber: exp.invoiceNumber,
+      supplierId: exp.supplierId ?? "",
+      category: exp.category,
+      amount: String(exp.amount),
+      paymentMethod: pm,
+      notes: exp.notes,
     });
   }
 
@@ -193,7 +198,11 @@ export default function ExpensesPage() {
           </div>
           <div>
             <label className="block text-sm text-neutral-600 dark:text-neutral-400">Τρόπος πληρωμής</label>
-            <input type="text" value={form.paymentMethod} onChange={(e) => setForm((p) => ({ ...p, paymentMethod: e.target.value }))} className="input-field mt-1" />
+            <select value={form.paymentMethod} onChange={(e) => setForm((p) => ({ ...p, paymentMethod: e.target.value }))} className="input-field mt-1">
+              {PAYMENT_METHODS.map((pm) => (
+                <option key={pm} value={pm}>{pm}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm text-neutral-600 dark:text-neutral-400">Σημειώσεις</label>
@@ -233,7 +242,11 @@ export default function ExpensesPage() {
                     </select>
                     <input type="text" value={editForm.category} onChange={(ev) => setEditForm((p) => ({ ...p, category: ev.target.value }))} placeholder="Κατηγορία" className="input-field text-sm" />
                     <input type="number" step="0.01" min="0" value={editForm.amount} onChange={(ev) => setEditForm((p) => ({ ...p, amount: ev.target.value }))} className="input-field text-sm" />
-                    <input type="text" value={editForm.paymentMethod} onChange={(ev) => setEditForm((p) => ({ ...p, paymentMethod: ev.target.value }))} placeholder="Τρόπος πληρωμής" className="input-field text-sm" />
+                    <select value={editForm.paymentMethod} onChange={(ev) => setEditForm((p) => ({ ...p, paymentMethod: ev.target.value }))} className="input-field text-sm">
+                      {PAYMENT_METHODS.map((pm) => (
+                        <option key={pm} value={pm}>{pm}</option>
+                      ))}
+                    </select>
                     <input type="text" value={editForm.notes} onChange={(ev) => setEditForm((p) => ({ ...p, notes: ev.target.value }))} placeholder="Σημειώσεις" className="input-field text-sm" />
                     <div className="flex gap-2">
                       <button type="button" onClick={saveEdit} disabled={saving} className="btn-primary text-sm px-3 py-1.5">Αποθήκευση</button>
