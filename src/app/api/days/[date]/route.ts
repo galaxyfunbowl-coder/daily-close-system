@@ -95,6 +95,7 @@ export async function GET(
         id: r.id,
         department: r.department,
         subLabel: r.subLabel ?? null,
+        subLabelInfo: r.subLabelInfo ?? null,
         staffId: r.staffId ?? null,
         staffName: r.staff?.name ?? null,
         operator: r.operator ?? null,
@@ -122,6 +123,7 @@ type RevenueLineInput = {
   id?: string;
   department: Department;
   subLabel?: string | null;
+  subLabelInfo?: string | null;
   staffId?: string | null;
   operator?: ElectronicOperator | null;
   total: number;
@@ -213,6 +215,7 @@ export async function PATCH(
             dayId: day!.id,
             department: r.department,
             subLabel: r.subLabel ?? null,
+            subLabelInfo: r.subLabelInfo ?? null,
             staffId: r.staffId ?? null,
             operator: r.operator ?? null,
             total: r.total,

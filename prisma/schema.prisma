@@ -26,17 +26,18 @@ model Day {
 }
 
 model RevenueLine {
-  id         String              @id @default(cuid())
-  dayId      String
-  day        Day                 @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  department Department
-  subLabel   String?
-  staffId    String?
-  staff      Staff?              @relation(fields: [staffId], references: [id])
-  operator   ElectronicOperator?
-  total      Float
-  pos        Float
-  cash       Float
+  id           String              @id @default(cuid())
+  dayId        String
+  day          Day                 @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  department   Department
+  subLabel     String?
+  subLabelInfo String?
+  staffId      String?
+  staff        Staff?              @relation(fields: [staffId], references: [id])
+  operator     ElectronicOperator?
+  total        Float
+  pos          Float
+  cash         Float
 }
 
 model PartyEvent {

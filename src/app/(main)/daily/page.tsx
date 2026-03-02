@@ -15,6 +15,7 @@ type RevenueLineRow = {
   id: string;
   department: Department;
   subLabel: string | null;
+  subLabelInfo: string | null;
   staffId: string | null;
   staffName: string | null;
   operator: ElectronicOperator | null;
@@ -111,6 +112,7 @@ export default function DailyPage() {
           id: `new-${Date.now()}`,
           department: "RECEPTION_BOWLING" as Department,
           subLabel: "Regular",
+          subLabelInfo: null,
           staffId: null,
           staffName: null,
           operator: null,
@@ -131,6 +133,7 @@ export default function DailyPage() {
       id: `new-${Date.now()}`,
       department: isElectronic ? "ELECTRONIC_GAMES" : type,
       subLabel: null,
+      subLabelInfo: null,
       staffId: null,
       staffName: null,
       operator: isElectronic ? type : null,
@@ -207,6 +210,7 @@ export default function DailyPage() {
           revenueLines: day.revenueLines.map((r) => ({
             department: r.department,
             subLabel: r.subLabel,
+            subLabelInfo: r.subLabelInfo,
             staffId: r.staffId,
             operator: r.operator,
             total: r.total,
@@ -324,7 +328,7 @@ export default function DailyPage() {
               <div className="flex items-center justify-between">
                 <span className="font-medium text-neutral-800 dark:text-neutral-200">
                   {line.department === "RECEPTION_BOWLING" && line.subLabel
-                    ? `${DEPARTMENT_LABELS.RECEPTION_BOWLING} — ${line.subLabel}`
+                    ? `${DEPARTMENT_LABELS.RECEPTION_BOWLING} — ${line.subLabel}${line.subLabelInfo ? ` — ${line.subLabelInfo}` : ""}`
                     : line.department === "ELECTRONIC_GAMES" && line.operator
                       ? `${DEPARTMENT_LABELS.ELECTRONIC_GAMES} — ${OPERATOR_LABELS[line.operator]}`
                       : DEPARTMENT_LABELS[line.department] ?? line.department}
@@ -340,18 +344,32 @@ export default function DailyPage() {
                 )}
               </div>
               {line.department === "RECEPTION_BOWLING" && (
-                <div>
-                  <label className="block text-xs text-neutral-500 dark:text-neutral-400">SubLabel</label>
-                  <select
-                    value={line.subLabel ?? "Regular"}
-                    onChange={(e) => updateRevenueLine(idx, { subLabel: e.target.value })}
-                    className="input-field mt-1 py-1.5 text-sm"
-                  >
-                    {BOWLING_SUBLABELS.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
+                <>
+                  <div>
+                    <label className="block text-xs text-neutral-500 dark:text-neutral-400">Τύπος</label>
+                    <select
+                      value={line.subLabel ?? "Regular"}
+                      onChange={(e) => updateRevenueLine(idx, { subLabel: e.target.value })}
+                      className="input-field mt-1 py-1.5 text-sm"
+                    >
+                      {BOWLING_SUBLABELS.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {line.subLabel && line.subLabel !== "Regular" && (
+                    <div>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400">Πληροφορία (π.χ. Εσωτερικό πρωταθλημα, Πανελλήνιο, ονομασία εκδήλωσης)</label>
+                      <input
+                        type="text"
+                        value={line.subLabelInfo ?? ""}
+                        onChange={(e) => updateRevenueLine(idx, { subLabelInfo: e.target.value || null })}
+                        placeholder="π.χ. Εσωτερικό πρωταθλημα, Πανελλήνιο πρωταθλημα"
+                        className="input-field mt-1 py-1.5 text-sm"
+                      />
+                    </div>
+                  )}
+                </>
               )}
               {(line.department === "PAIDOTOPOS" || line.department === "BILIARDA") && (
                 <div>

@@ -13,7 +13,7 @@ export const OPERATOR_LABELS: Record<ElectronicOperator, string> = {
   DIKA_MOU: "Δικά μου ηλεκτρονικά",
 };
 
-export const BOWLING_SUBLABELS = ["Regular", "Tournament", "League"] as const;
+export const BOWLING_SUBLABELS = ["Regular", "Tournament", "League", "Εκδήλωση"] as const;
 
 export const ELECTRONIC_OPERATORS: ElectronicOperator[] = [
   "ADAM_GAMES",
