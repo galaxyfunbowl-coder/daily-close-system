@@ -56,6 +56,12 @@ export async function GET(
               cash: 0,
             },
             {
+              department: Department.BAR,
+              total: 0,
+              pos: 0,
+              cash: 0,
+            },
+            {
               department: Department.SERVICE,
               total: 0,
               pos: 0,
