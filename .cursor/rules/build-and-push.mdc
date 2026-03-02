@@ -12,4 +12,4 @@ When you make code changes in this project (daily-closing-app):
 
 Do this **without the user having to ask**. Skip only if the user explicitly says not to (e.g. "don't push" or "don't commit yet").
 
-Do not kill the dev server or restart it unless the user asks.
+After changes, the dev server (port 3000) is restarted per the rule "restart-dev-on-changes".

@@ -59,7 +59,7 @@ model Expense {
   date          String
   invoiceNumber String?
   supplierId    String?
-  supplier      Supplier? @relation(fields: [supplierId], references: [id])
+  supplier      Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   category      String
   amount        Float
   paymentMethod String

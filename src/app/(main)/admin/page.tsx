@@ -155,6 +155,40 @@ function SuppliersSection({
   const [name, setName] = useState("");
   const [defaultCategory, setDefaultCategory] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDefaultCategory, setEditDefaultCategory] = useState("");
+
+  function startEdit(s: Supplier) {
+    setEditingId(s.id);
+    setEditName(s.name);
+    setEditDefaultCategory(s.defaultCategory);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function saveEdit() {
+    if (!editingId || !editName.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/suppliers/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editName.trim(), defaultCategory: editDefaultCategory.trim() }),
+      });
+      if (res.ok) {
+        onSaved();
+        cancelEdit();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error ?? "Σφάλμα");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function addSupplier(e: React.FormEvent) {
     e.preventDefault();
@@ -179,6 +213,16 @@ function SuppliersSection({
     }
   }
 
+  async function deleteSupplier(id: string) {
+    if (!confirm("Διαγραφή προμηθευτή; Τα εξοδα που τον χρησιμοποιούν θα μείνουν χωρίς προμηθευτή.")) return;
+    const res = await fetch(`/api/admin/suppliers/${id}`, { method: "DELETE" });
+    if (res.ok) onSaved();
+    else {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error ?? "Σφάλμα");
+    }
+  }
+
   return (
     <section className="card-section space-y-4">
       <form onSubmit={addSupplier} className="space-y-2">
@@ -192,8 +236,25 @@ function SuppliersSection({
         <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
           {suppliers.map((s) => (
             <li key={s.id} className="py-2">
-              <span className="font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
-              <span className="text-neutral-500 dark:text-neutral-400 text-sm"> — {s.defaultCategory}</span>
+              {editingId === s.id ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Όνομα" className="input-field flex-1 min-w-0" />
+                  <input type="text" value={editDefaultCategory} onChange={(e) => setEditDefaultCategory(e.target.value)} placeholder="Προεπιλεγμένη κατηγορία" className="input-field flex-1 min-w-0" />
+                  <button type="button" onClick={saveEdit} disabled={saving || !editName.trim()} className="btn-primary text-sm px-3">Αποθήκευση</button>
+                  <button type="button" onClick={cancelEdit} disabled={saving} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Ακύρωση</button>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <span>
+                    <span className="font-medium text-neutral-900 dark:text-neutral-100">{s.name}</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 text-sm"> — {s.defaultCategory}</span>
+                  </span>
+                  <span className="flex gap-2">
+                    <button type="button" onClick={() => startEdit(s)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Επεξεργασία</button>
+                    <button type="button" onClick={() => deleteSupplier(s.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">Διαγραφή</button>
+                  </span>
+                </div>
+              )}
             </li>
           ))}
         </ul>

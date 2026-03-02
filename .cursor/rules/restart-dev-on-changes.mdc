@@ -1,0 +1,15 @@
+---
+description: After code changes, stop port 3000 and start dev server again
+alwaysApply: true
+---
+
+# Restart dev server (port 3000) after changes
+
+When you make code changes in this project (daily-closing-app):
+
+1. **Stop port 3000**: Terminate any process listening on port 3000.
+   - **Windows (PowerShell)**: `Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }`
+   - **Unix/macOS**: `npx kill-port 3000` (or `lsof -ti:3000 | xargs kill -9` if kill-port not available)
+2. **Start dev server**: Run `npm run dev` in the project root (run in background so the terminal stays usable).
+
+Do this after applying changes, without the user having to ask. Skip only if the user explicitly says not to (e.g. "don't restart" or "leave the server running").
