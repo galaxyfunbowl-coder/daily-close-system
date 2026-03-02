@@ -133,13 +133,14 @@ export default function DailyPage() {
   }
 
   function addRevenueLineByType(
-    type: "PAIDOTOPOS" | "BILIARDA" | ElectronicOperator
+    type: "PAIDOTOPOS" | "BILIARDA" | "BAR" | "SERVICE" | ElectronicOperator
   ) {
     if (!day) return;
     const isElectronic = type === "ADAM_GAMES" || type === "TWOPLAY_GAMES" || type === "DIKA_MOU";
+    const department: Department = isElectronic ? "ELECTRONIC_GAMES" : type;
     const newLine: RevenueLineRow = {
       id: `new-${Date.now()}`,
-      department: isElectronic ? "ELECTRONIC_GAMES" : type,
+      department,
       subLabel: null,
       subLabelInfo: null,
       staffId: null,
@@ -398,7 +399,7 @@ export default function DailyPage() {
                   )}
                 </>
               )}
-              {(line.department === "PAIDOTOPOS" || line.department === "BILIARDA") && (
+              {(line.department === "PAIDOTOPOS" || line.department === "BILIARDA" || line.department === "BAR" || line.department === "SERVICE") && (
                 <div>
                   <label className="block text-xs text-neutral-500 dark:text-neutral-400">Υπεύθυνος</label>
                   <select
@@ -456,15 +457,19 @@ export default function DailyPage() {
                 const v = e.target.value;
                 if (v === "PAIDOTOPOS") addRevenueLineByType("PAIDOTOPOS");
                 else if (v === "BILIARDA") addRevenueLineByType("BILIARDA");
+                else if (v === "BAR") addRevenueLineByType("BAR");
+                else if (v === "SERVICE") addRevenueLineByType("SERVICE");
                 else if (v === "ADAM_GAMES" || v === "TWOPLAY_GAMES" || v === "DIKA_MOU") addRevenueLineByType(v);
                 e.target.value = "";
               }}
               className="input-field py-1.5 text-sm w-auto min-w-[180px]"
-              title="Π.χ. αν αφαιρέσεις Παιδότοπο, Μπιλιάρδα ή Ηλεκτρονικά"
+              title="Π.χ. αν αφαιρέσεις Παιδότοπο, Μπιλιάρδα, Bar, Service ή Ηλεκτρονικά"
             >
               <option value="">Προσθήκη γραμμής...</option>
               <option value="PAIDOTOPOS">Παιδότοπος</option>
               <option value="BILIARDA">Μπιλιάρδα</option>
+              <option value="BAR">Bar</option>
+              <option value="SERVICE">Service</option>
               <option value="ADAM_GAMES">Ηλεκτρονικά — Adam Games</option>
               <option value="TWOPLAY_GAMES">Ηλεκτρονικά — 2play Games</option>
               <option value="DIKA_MOU">Ηλεκτρονικά — Δικά μου</option>

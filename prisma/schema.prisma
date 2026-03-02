@@ -109,6 +109,8 @@ enum Department {
   PAIDOTOPOS
   BILIARDA
   ELECTRONIC_GAMES
+  BAR
+  SERVICE
 }
 
 enum ElectronicOperator {

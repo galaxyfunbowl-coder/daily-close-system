@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
   const electronicByOperator: Record<string, number> = {};
   let playgroundTotal = 0;
   let billiardsTotal = 0;
+  let barTotal = 0;
+  let serviceTotal = 0;
 
   for (const day of days) {
     const dayRevenue = day.revenueLines.reduce((s, r) => s + r.total, 0);
@@ -63,6 +65,10 @@ export async function GET(request: NextRequest) {
         playgroundTotal += r.total;
       } else if (r.department === Department.BILIARDA) {
         billiardsTotal += r.total;
+      } else if (r.department === Department.BAR) {
+        barTotal += r.total;
+      } else if (r.department === Department.SERVICE) {
+        serviceTotal += r.total;
       }
     }
   }
@@ -109,6 +115,8 @@ export async function GET(request: NextRequest) {
     electronicByOperator,
     playgroundTotal,
     billiardsTotal,
+    barTotal,
+    serviceTotal,
     yoy: {
       revenue: prevRevenue,
       expenses: prevExpenses,
