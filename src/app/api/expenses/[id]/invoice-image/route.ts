@@ -4,10 +4,13 @@ import { requireAuth } from "@/lib/require-auth";
 import { writeFile, readFile, unlink, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
+import sharp from "sharp";
 
 const UPLOAD_DIR = "invoice-images";
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_WIDTH = 1920;
+const JPEG_QUALITY = 85;
 
 function getUploadDir(): string {
   const dataDir = path.join(process.cwd(), "data");
@@ -85,18 +88,21 @@ export async function POST(
         { status: 400 }
       );
     }
-    const ext =
-      file.type === "image/png"
-        ? ".png"
-        : file.type === "image/webp"
-          ? ".webp"
-          : ".jpg";
     const uploadDir = getUploadDir();
     await mkdir(uploadDir, { recursive: true });
-    const filePath = getFilePath(id, ext);
+    if (expense.imagePath) {
+      const oldPath = path.join(process.cwd(), "data", expense.imagePath);
+      if (existsSync(oldPath)) await unlink(oldPath);
+    }
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    await writeFile(filePath, buffer);
+    const inputBuffer = Buffer.from(arrayBuffer);
+    const compressed = await sharp(inputBuffer)
+      .resize(MAX_WIDTH, undefined, { withoutEnlargement: true })
+      .jpeg({ quality: JPEG_QUALITY })
+      .toBuffer();
+    const ext = ".jpg";
+    const filePath = getFilePath(id, ext);
+    await writeFile(filePath, compressed);
     const imagePath = `${UPLOAD_DIR}/${id}${ext}`;
     await prisma.expense.update({
       where: { id },
