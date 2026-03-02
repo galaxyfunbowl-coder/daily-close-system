@@ -111,6 +111,7 @@ enum Department {
   ELECTRONIC_GAMES
   BAR
   SERVICE
+  PROSHOP
 }
 
 enum ElectronicOperator {

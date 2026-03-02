@@ -7,6 +7,7 @@ export const DEPARTMENT_LABELS: Record<string, string> = {
   ELECTRONIC_GAMES: "Ηλεκτρονικά Παιχνίδια",
   BAR: "Bar",
   SERVICE: "Service",
+  PROSHOP: "ProShop",
 };
 
 export const OPERATOR_LABELS: Record<ElectronicOperator, string> = {

@@ -133,11 +133,11 @@ export default function DailyPage() {
   }
 
   function addRevenueLineByType(
-    type: "PAIDOTOPOS" | "BILIARDA" | "BAR" | "SERVICE" | ElectronicOperator
+    type: "PAIDOTOPOS" | "BILIARDA" | "BAR" | "SERVICE" | "PROSHOP" | ElectronicOperator
   ) {
     if (!day) return;
     const isElectronic = type === "ADAM_GAMES" || type === "TWOPLAY_GAMES" || type === "DIKA_MOU";
-    const department: Department = isElectronic ? "ELECTRONIC_GAMES" : type;
+    const department = (isElectronic ? "ELECTRONIC_GAMES" : type) as Department;
     const newLine: RevenueLineRow = {
       id: `new-${Date.now()}`,
       department,
@@ -399,7 +399,7 @@ export default function DailyPage() {
                   )}
                 </>
               )}
-              {(line.department === "PAIDOTOPOS" || line.department === "BILIARDA" || line.department === "BAR" || line.department === "SERVICE") && (
+              {(["PAIDOTOPOS", "BILIARDA", "BAR", "SERVICE", "PROSHOP"] as readonly string[]).includes(line.department) && (
                 <div>
                   <label className="block text-xs text-neutral-500 dark:text-neutral-400">Υπεύθυνος</label>
                   <select
@@ -459,6 +459,7 @@ export default function DailyPage() {
                 else if (v === "BILIARDA") addRevenueLineByType("BILIARDA");
                 else if (v === "BAR") addRevenueLineByType("BAR");
                 else if (v === "SERVICE") addRevenueLineByType("SERVICE");
+                else if (v === "PROSHOP") addRevenueLineByType("PROSHOP");
                 else if (v === "ADAM_GAMES" || v === "TWOPLAY_GAMES" || v === "DIKA_MOU") addRevenueLineByType(v);
                 e.target.value = "";
               }}
@@ -470,6 +471,7 @@ export default function DailyPage() {
               <option value="BILIARDA">Μπιλιάρδα</option>
               <option value="BAR">Bar</option>
               <option value="SERVICE">Service</option>
+              <option value="PROSHOP">ProShop</option>
               <option value="ADAM_GAMES">Ηλεκτρονικά — Adam Games</option>
               <option value="TWOPLAY_GAMES">Ηλεκτρονικά — 2play Games</option>
               <option value="DIKA_MOU">Ηλεκτρονικά — Δικά μου</option>

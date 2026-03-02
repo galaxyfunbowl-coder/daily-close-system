@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
   let billiardsTotal = 0;
   let barTotal = 0;
   let serviceTotal = 0;
+  let proshopTotal = 0;
 
   for (const day of days) {
     const dayRevenue = day.revenueLines.reduce((s, r) => s + r.total, 0);
@@ -69,6 +70,8 @@ export async function GET(request: NextRequest) {
         barTotal += r.total;
       } else if (r.department === Department.SERVICE) {
         serviceTotal += r.total;
+      } else if ((r.department as string) === "PROSHOP") {
+        proshopTotal += r.total;
       }
     }
   }
@@ -117,6 +120,7 @@ export async function GET(request: NextRequest) {
     billiardsTotal,
     barTotal,
     serviceTotal,
+    proshopTotal,
     yoy: {
       revenue: prevRevenue,
       expenses: prevExpenses,

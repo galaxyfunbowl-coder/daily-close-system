@@ -20,6 +20,7 @@ type DashboardData = {
   billiardsTotal: number;
   barTotal: number;
   serviceTotal: number;
+  proshopTotal: number;
   yoy: {
     revenue: number;
     expenses: number;
@@ -171,12 +172,13 @@ export default function DashboardPage() {
           </section>
 
           <section className="card-section">
-            <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Παιδότοπος / Μπιλιάρδα / Bar / Service</h2>
+            <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Παιδότοπος / Μπιλιάρδα / Bar / Service / ProShop</h2>
             <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
               <li>Παιδότοπος: {data.playgroundTotal.toFixed(2)} €</li>
               <li>Μπιλιάρδα: {data.billiardsTotal.toFixed(2)} €</li>
               <li>Bar: {data.barTotal.toFixed(2)} €</li>
               <li>Service: {data.serviceTotal.toFixed(2)} €</li>
+              <li>ProShop: {data.proshopTotal.toFixed(2)} €</li>
             </ul>
           </section>
 
