@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data/app.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  passwordHash String
+  createdAt DateTime @default(now())
+}
+
+model Day {
+  id          String   @id @default(cuid())
+  date        String   @unique
+  notes       String?
+  isClosed    Boolean  @default(false)
+  zPosTotal   Float?
+  zCashTotal  Float?
+  revenueLines RevenueLine[]
+  partyEvents PartyEvent[]
+}
+
+model RevenueLine {
+  id         String              @id @default(cuid())
+  dayId      String
+  day        Day                 @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  department Department
+  subLabel   String?
+  staffId    String?
+  staff      Staff?              @relation(fields: [staffId], references: [id])
+  operator   ElectronicOperator?
+  total      Float
+  pos        Float
+  cash       Float
+}
+
+model PartyEvent {
+  id            String        @id @default(cuid())
+  dayId         String
+  day           Day           @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  staffId       String
+  staff         Staff         @relation(fields: [staffId], references: [id])
+  total         Float
+  paymentMethod PaymentMethod
+  posInput      Float?
+  posComputed   Float
+  cashComputed  Float
+  notes         String?
+}
+
+model Expense {
+  id            String   @id @default(cuid())
+  date          String
+  invoiceNumber String?
+  supplierId    String?
+  supplier      Supplier? @relation(fields: [supplierId], references: [id])
+  category      String
+  amount        Float
+  paymentMethod String
+  notes         String?
+}
+
+model Staff {
+  id           String        @id @default(cuid())
+  name         String
+  role         StaffRole     @default(SERVER)
+  active       Boolean       @default(true)
+  revenueLines RevenueLine[]
+  partyEvents  PartyEvent[]
+}
+
+model Supplier {
+  id              String   @id @default(cuid())
+  name            String
+  defaultCategory String
+  expenses        Expense[]
+}
+
+model Holiday {
+  id   String @id @default(cuid())
+  date String @unique
+  name String
+}
+
+model Closure {
+  id     String @id @default(cuid())
+  date   String @unique
+  reason String
+}
+
+enum Department {
+  RECEPTION_BOWLING
+  PAIDOTOPOS
+  BILIARDA
+  ELECTRONIC_GAMES
+}
+
+enum ElectronicOperator {
+  ADAM_GAMES
+  TWOPLAY_GAMES
+  DIKA_MOU
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  SPLIT
+}
+
+enum StaffRole {
+  SERVER
+  ADMIN
+}
