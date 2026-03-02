@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   };
 
   const rows: string[] = [];
-  rows.push("date,department,sublabel,staff,total,pos,cash,notes");
+  rows.push("date,department,sublabel,staff,total,cash,notes");
   for (const day of days) {
     for (const r of day.revenueLines) {
       rows.push([
@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
         r.subLabel ?? "",
         r.staff?.name ?? "",
         r.total,
-        r.pos,
         r.cash,
         "",
       ].map(escape).join(","));

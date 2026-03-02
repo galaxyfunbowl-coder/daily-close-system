@@ -21,7 +21,6 @@ type RevenueLineRow = {
   staffName: string | null;
   operator: ElectronicOperator | null;
   total: number;
-  pos: number;
   cash: number;
 };
 
@@ -124,7 +123,6 @@ export default function DailyPage() {
           staffName: null,
           operator: null,
           total: 0,
-          pos: 0,
           cash: 0,
         },
       ],
@@ -146,7 +144,6 @@ export default function DailyPage() {
       staffName: null,
       operator: isElectronic ? type : null,
       total: 0,
-      pos: 0,
       cash: 0,
     };
     setDay({

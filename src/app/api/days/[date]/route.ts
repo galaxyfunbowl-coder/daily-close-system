@@ -99,7 +99,6 @@ export async function GET(
         staffName: r.staff?.name ?? null,
         operator: r.operator ?? null,
         total: r.total,
-        pos: r.pos,
         cash: r.cash,
       })),
       partyEvents: day.partyEvents.map((p) => ({
@@ -126,7 +125,6 @@ type RevenueLineInput = {
   staffId?: string | null;
   operator?: ElectronicOperator | null;
   total: number;
-  pos?: number;
   cash?: number;
 };
 
@@ -218,7 +216,7 @@ export async function PATCH(
             staffId: r.staffId ?? null,
             operator: r.operator ?? null,
             total: r.total,
-            pos: r.pos ?? 0,
+            pos: 0,
             cash: r.cash ?? r.total,
           })),
         });
