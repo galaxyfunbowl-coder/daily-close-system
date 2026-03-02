@@ -183,6 +183,14 @@ export default function DailyPage() {
     setDay({ ...day, partyEvents: day.partyEvents.filter((_, i) => i !== index) });
   }
 
+  const totalRevenueFromLines =
+    day?.revenueLines.reduce((s, r) => s + r.total, 0) ?? 0;
+  const totalRevenueFromParties =
+    day?.partyEvents.reduce((s, p) => s + p.total, 0) ?? 0;
+  const totalRevenueDay = totalRevenueFromLines + totalRevenueFromParties;
+  const zPos = day?.zPosTotal ?? 0;
+  const calculatedCash = Math.max(0, totalRevenueDay - zPos);
+
   async function save() {
     if (!day) return;
     setSaving(true);
@@ -195,7 +203,7 @@ export default function DailyPage() {
           notes: day.notes,
           isClosed: day.isClosed,
           zPosTotal: day.zPosTotal,
-          zCashTotal: day.zCashTotal,
+          zCashTotal: totalRevenueDay - (day.zPosTotal ?? 0),
           revenueLines: day.revenueLines.map((r) => ({
             department: r.department,
             subLabel: r.subLabel,
@@ -277,12 +285,15 @@ export default function DailyPage() {
         </div>
       </section>
 
-      {/* SECTION B — Z: συνολικό POS και Μετρητά για την ημέρα */}
+      {/* SECTION B — Z: μόνο POS από το μηχάνημα· μετρητά = έσοδα − POS */}
       <section className="card-section">
         <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Z — Σύνολα ημέρας</h2>
         <div className="space-y-3">
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            Συνολικά έσοδα (από γραμμές + πάρτυ): <strong>{totalRevenueDay.toFixed(2)} €</strong>
+          </p>
           <div>
-            <label className="block text-sm text-neutral-600 dark:text-neutral-400">POS σύνολο</label>
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">POS σύνολο (από το Z)</label>
             <input
               type="number"
               step="0.01"
@@ -295,20 +306,9 @@ export default function DailyPage() {
               className="input-field mt-1"
             />
           </div>
-          <div>
-            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Μετρητά σύνολο</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={day.zCashTotal ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                updateDay({ zCashTotal: v === "" ? null : parseFloat(v) || 0 });
-              }}
-              className="input-field mt-1"
-            />
-          </div>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            Μετρητά (υπολογισμένα): <strong>{calculatedCash.toFixed(2)} €</strong>
+          </p>
         </div>
       </section>
 
