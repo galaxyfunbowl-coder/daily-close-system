@@ -1,0 +1,15 @@
+---
+description: After code changes: build, kill 3000, push to GitHub, run dev
+alwaysApply: true
+---
+
+# Deploy Workflow (daily-closing-app)
+
+After making any code changes to this project, **always** run this sequence without asking:
+
+1. **Build**: `npm run build`
+2. **Kill port 3000**: Stop any process using port 3000
+3. **Git**: `git add -A`, `git commit -m "..."`, `git push`
+4. **Run**: `npm run dev` (background)
+
+Do this automatically at the end of every session where you edited code. Do not ask for confirmation.
