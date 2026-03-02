@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const MONTH_NAMES = ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"];
 const WEEKDAY = ["Κυρ", "Δευ", "Τρι", "Τετ", "Πεμ", "Παρ", "Σαβ"];
@@ -26,6 +27,7 @@ function weekday(dateStr: string): string {
 }
 
 export default function MonthPage() {
+  const router = useRouter();
   const [month, setMonth] = useState(currentMonth);
   const [days, setDays] = useState<DayRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,8 +90,8 @@ export default function MonthPage() {
         <section className="card-section p-0 overflow-hidden">
           <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
             {days.map((d) => (
-              <li key={d.date} className="p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-                <Link href={`/daily?date=${d.date}`} className="block">
+              <li key={d.date} className="p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 flex items-start gap-2">
+                <Link href={`/daily?date=${d.date}`} className="flex-1 min-w-0">
                   <div className="flex justify-between items-start gap-2">
                     <div>
                       <span className="font-medium text-neutral-900 dark:text-neutral-100">{d.date}</span>
@@ -109,6 +111,21 @@ export default function MonthPage() {
                     {d.partyCount > 0 && <span>Πάρτυ: {d.partyCount}</span>}
                   </div>
                 </Link>
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    if (!confirm(`Διαγραφή ημέρας ${d.date}; Σίγουρα;`)) return;
+                    const res = await fetch(`/api/days/${d.date}`, { method: "DELETE" });
+                    if (res.ok) {
+                      load(month);
+                      router.refresh();
+                    } else alert("Σφάλμα διαγραφής");
+                  }}
+                  className="text-xs text-red-600 dark:text-red-400 hover:underline shrink-0"
+                >
+                  Διαγραφή
+                </button>
               </li>
             ))}
           </ul>

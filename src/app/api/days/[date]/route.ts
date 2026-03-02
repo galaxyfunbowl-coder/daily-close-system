@@ -247,3 +247,21 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ date: string }> }
+) {
+  const auth = await requireAuth();
+  if (auth) return auth;
+  const date = parseDate((await params).date);
+  if (!date) {
+    return NextResponse.json({ error: "Invalid date" }, { status: 400 });
+  }
+  try {
+    await prisma.day.delete({ where: { date } });
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "Day not found or already deleted" }, { status: 404 });
+  }
+}

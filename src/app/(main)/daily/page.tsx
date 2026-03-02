@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import type { Department, ElectronicOperator, PaymentMethod } from "@prisma/client";
 import {
   DEPARTMENT_LABELS,
@@ -61,6 +61,7 @@ function weekdayLabel(dateStr: string): string {
 
 export default function DailyPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [date, setDate] = useState(todayISO);
   const [day, setDay] = useState<DayData | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -293,6 +294,25 @@ export default function DailyPage() {
             />
             <span className="text-sm">Κλειστό</span>
           </label>
+          <div className="pt-2 border-t border-neutral-200 dark:border-neutral-700">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!confirm(`Διαγραφή ολόκληρης της ημέρας ${day.date}; Δεν γίνεται αναίρεση. Σίγουρα;`)) return;
+                const res = await fetch(`/api/days/${day.date}`, { method: "DELETE" });
+                if (res.ok) {
+                  router.push("/month");
+                  router.refresh();
+                } else {
+                  const data = await res.json().catch(() => ({}));
+                  setError(data.error ?? "Σφάλμα διαγραφής");
+                }
+              }}
+              className="text-sm text-red-600 dark:text-red-400 hover:underline"
+            >
+              Διαγραφή ημέρας
+            </button>
+          </div>
         </div>
       </section>
 

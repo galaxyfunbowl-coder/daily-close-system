@@ -36,6 +36,8 @@ export default function ExpensesPage() {
     notes: "",
   });
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ date: "", invoiceNumber: "", supplierId: "", category: "", amount: "", paymentMethod: "", notes: "" });
 
   const loadExpenses = useCallback(async () => {
     const params = new URLSearchParams();
@@ -110,6 +112,55 @@ export default function ExpensesPage() {
     }));
   }
 
+  function startEdit(e: Expense) {
+    setEditingId(e.id);
+    setEditForm({
+      date: e.date,
+      invoiceNumber: e.invoiceNumber,
+      supplierId: e.supplierId ?? "",
+      category: e.category,
+      amount: String(e.amount),
+      paymentMethod: e.paymentMethod,
+      notes: e.notes,
+    });
+  }
+
+  async function saveEdit() {
+    if (!editingId) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/expenses/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: editForm.date,
+          invoiceNumber: editForm.invoiceNumber || null,
+          supplierId: editForm.supplierId || null,
+          category: editForm.category,
+          amount: parseFloat(editForm.amount) || 0,
+          paymentMethod: editForm.paymentMethod,
+          notes: editForm.notes || null,
+        }),
+      });
+      if (res.ok) {
+        setEditingId(null);
+        loadExpenses();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error ?? "Σφάλμα");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteExpense(id: string) {
+    if (!confirm("Διαγραφή εξόδου; Δεν γίνεται αναίρεση.")) return;
+    const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
+    if (res.ok) loadExpenses();
+    else alert("Σφάλμα διαγραφής");
+  }
+
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Έξοδα</h1>
@@ -171,12 +222,37 @@ export default function ExpensesPage() {
         ) : (
           <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
             {expenses.map((e) => (
-              <li key={e.id} className="p-3 flex justify-between items-start gap-2">
-                <div className="min-w-0">
-                  <p className="font-medium text-neutral-900 dark:text-neutral-100">{e.date}</p>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400">{e.supplierName ?? e.category} — {e.amount.toFixed(2)} €</p>
-                  {e.notes && <p className="text-xs text-neutral-500 dark:text-neutral-400">{e.notes}</p>}
-                </div>
+              <li key={e.id} className="p-3">
+                {editingId === e.id ? (
+                  <div className="space-y-2">
+                    <input type="date" value={editForm.date} onChange={(ev) => setEditForm((p) => ({ ...p, date: ev.target.value }))} className="input-field text-sm" />
+                    <input type="text" value={editForm.invoiceNumber} onChange={(ev) => setEditForm((p) => ({ ...p, invoiceNumber: ev.target.value }))} placeholder="Αρ. τιμολογίου" className="input-field text-sm" />
+                    <select value={editForm.supplierId} onChange={(ev) => { const s = suppliers.find((x) => x.id === ev.target.value); setEditForm((p) => ({ ...p, supplierId: ev.target.value, category: s ? s.defaultCategory : p.category })); }} className="input-field text-sm">
+                      <option value="">—</option>
+                      {suppliers.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+                    </select>
+                    <input type="text" value={editForm.category} onChange={(ev) => setEditForm((p) => ({ ...p, category: ev.target.value }))} placeholder="Κατηγορία" className="input-field text-sm" />
+                    <input type="number" step="0.01" min="0" value={editForm.amount} onChange={(ev) => setEditForm((p) => ({ ...p, amount: ev.target.value }))} className="input-field text-sm" />
+                    <input type="text" value={editForm.paymentMethod} onChange={(ev) => setEditForm((p) => ({ ...p, paymentMethod: ev.target.value }))} placeholder="Τρόπος πληρωμής" className="input-field text-sm" />
+                    <input type="text" value={editForm.notes} onChange={(ev) => setEditForm((p) => ({ ...p, notes: ev.target.value }))} placeholder="Σημειώσεις" className="input-field text-sm" />
+                    <div className="flex gap-2">
+                      <button type="button" onClick={saveEdit} disabled={saving} className="btn-primary text-sm px-3 py-1.5">Αποθήκευση</button>
+                      <button type="button" onClick={() => setEditingId(null)} className="rounded bg-neutral-200 dark:bg-neutral-600 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-100">Ακύρωση</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-neutral-900 dark:text-neutral-100">{e.date}</p>
+                      <p className="text-sm text-neutral-600 dark:text-neutral-400">{e.supplierName ?? e.category} — {e.amount.toFixed(2)} €</p>
+                      {e.notes && <p className="text-xs text-neutral-500 dark:text-neutral-400">{e.notes}</p>}
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button type="button" onClick={() => startEdit(e)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Επεξεργασία</button>
+                      <button type="button" onClick={() => deleteExpense(e.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">Διαγραφή</button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
