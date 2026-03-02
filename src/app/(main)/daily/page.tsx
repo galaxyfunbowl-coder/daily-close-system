@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { Department, ElectronicOperator, PaymentMethod } from "@prisma/client";
 import {
   DEPARTMENT_LABELS,
@@ -59,12 +60,18 @@ function weekdayLabel(dateStr: string): string {
 }
 
 export default function DailyPage() {
+  const searchParams = useSearchParams();
   const [date, setDate] = useState(todayISO);
   const [day, setDay] = useState<DayData | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const p = searchParams.get("date");
+    if (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) setDate(p);
+  }, [searchParams]);
 
   const loadDay = useCallback(async (d: string) => {
     setLoading(true);
