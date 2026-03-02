@@ -50,24 +50,17 @@ export async function GET(
               cash: 0,
             },
             {
-              department: Department.PAIDOTOPOS,
-              total: 0,
-              pos: 0,
-              cash: 0,
-            },
-            {
               department: Department.BILIARDA,
               total: 0,
               pos: 0,
               cash: 0,
             },
-            ...ELECTRONIC_OPERATORS.map((operator) => ({
-              department: Department.ELECTRONIC_GAMES,
-              operator,
+            {
+              department: Department.SERVICE,
               total: 0,
               pos: 0,
               cash: 0,
-            })),
+            },
           ],
         },
       },
