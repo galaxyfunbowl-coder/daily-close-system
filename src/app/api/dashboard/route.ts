@@ -29,22 +29,21 @@ export async function GET(request: NextRequest) {
 
   let totalRevenue = 0;
   let totalPOS = 0;
+  let totalCash = 0;
   let partyRevenue = 0;
   let partyCount = 0;
   const bowlingBySubLabel: Record<string, number> = {};
   const electronicByOperator: Record<string, number> = {};
   let playgroundTotal = 0;
   let billiardsTotal = 0;
-  const posDiffDays: { date: string; diff: number }[] = [];
 
   for (const day of days) {
-    const dayPos = day.revenueLines.reduce((s, r) => s + r.pos, 0);
-    const partyPos = day.partyEvents.reduce((s, p) => s + p.posComputed, 0);
     const dayRevenue = day.revenueLines.reduce((s, r) => s + r.total, 0);
     const dayPartyRevenue = day.partyEvents.reduce((s, p) => s + p.total, 0);
 
     totalRevenue += dayRevenue + dayPartyRevenue;
-    totalPOS += dayPos + partyPos;
+    totalPOS += day.zPosTotal ?? 0;
+    totalCash += day.zCashTotal ?? 0;
     partyRevenue += dayPartyRevenue;
     partyCount += day.partyEvents.length;
 
@@ -60,13 +59,6 @@ export async function GET(request: NextRequest) {
       } else if (r.department === Department.BILIARDA) {
         billiardsTotal += r.total;
       }
-    }
-
-    const zPos = day.zPosTotal ?? 0;
-    const calculatedPOS = dayPos + partyPos;
-    const diff = zPos - calculatedPOS;
-    if (Math.abs(diff) > 0.001) {
-      posDiffDays.push({ date: day.date, diff });
     }
   }
 
@@ -103,13 +95,13 @@ export async function GET(request: NextRequest) {
     totalExpenses,
     netResult,
     totalPOS,
+    totalCash,
     partyRevenue,
     partyCount,
     bowlingBySubLabel,
     electronicByOperator,
     playgroundTotal,
     billiardsTotal,
-    posDiffDays,
     yoy: {
       revenue: prevRevenue,
       expenses: prevExpenses,

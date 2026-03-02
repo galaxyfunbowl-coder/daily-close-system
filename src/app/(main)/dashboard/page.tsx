@@ -10,13 +10,13 @@ type DashboardData = {
   totalExpenses: number;
   netResult: number;
   totalPOS: number;
+  totalCash: number;
   partyRevenue: number;
   partyCount: number;
   bowlingBySubLabel: Record<string, number>;
   electronicByOperator: Record<string, number>;
   playgroundTotal: number;
   billiardsTotal: number;
-  posDiffDays: { date: string; diff: number }[];
   yoy: {
     revenue: number;
     expenses: number;
@@ -100,7 +100,8 @@ export default function DashboardPage() {
               <li><strong>Έσοδα:</strong> {data.totalRevenue.toFixed(2)} €</li>
               <li><strong>Έξοδα:</strong> {data.totalExpenses.toFixed(2)} €</li>
               <li><strong>Καθαρά:</strong> {data.netResult.toFixed(2)} €</li>
-              <li><strong>POS σύνολο:</strong> {data.totalPOS.toFixed(2)} €</li>
+              <li><strong>POS σύνολο (από Z):</strong> {data.totalPOS.toFixed(2)} €</li>
+              <li><strong>Μετρητά σύνολο (από Z):</strong> {data.totalCash.toFixed(2)} €</li>
               <li><strong>Έσοδα πάρτυ:</strong> {data.partyRevenue.toFixed(2)} €</li>
               <li><strong>Αριθμός πάρτυ:</strong> {data.partyCount}</li>
             </ul>
@@ -150,16 +151,6 @@ export default function DashboardPage() {
             </ul>
           </section>
 
-          {data.posDiffDays.length > 0 && (
-            <section className="rounded-lg border-2 border-red-500 dark:border-red-600 bg-red-50 dark:bg-red-950 p-4">
-              <h2 className="mb-3 font-medium text-red-800 dark:text-red-200">Έλεγχος POS — ημέρες με διαφορά</h2>
-              <ul className="space-y-1 text-sm text-red-800 dark:text-red-200">
-                {data.posDiffDays.map(({ date, diff }) => (
-                  <li key={date}>{date}: διαφορά {diff.toFixed(2)} €</li>
-                ))}
-              </ul>
-            </section>
-          )}
         </>
       )}
     </div>

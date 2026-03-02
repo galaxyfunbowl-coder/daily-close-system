@@ -125,16 +125,14 @@ type RevenueLineInput = {
   staffId?: string | null;
   operator?: ElectronicOperator | null;
   total: number;
-  pos: number;
-  cash: number;
+  pos?: number;
+  cash?: number;
 };
 
 type PartyEventInput = {
   id?: string;
   staffId: string;
   total: number;
-  paymentMethod: PaymentMethod;
-  posInput?: number | null;
   notes?: string | null;
 };
 
@@ -165,24 +163,18 @@ export async function PATCH(
   }
 
   for (const line of body.revenueLines ?? []) {
-    if (line.pos > line.total || line.cash < 0 || line.total < 0 || line.pos < 0) {
+    if (line.total < 0) {
       return NextResponse.json(
-        { error: "Invalid revenue line: POS ≤ Total, no negative values" },
+        { error: "Invalid revenue line: total must be ≥ 0" },
         { status: 400 }
       );
     }
   }
 
   for (const ev of body.partyEvents ?? []) {
-    const posComputed =
-      ev.paymentMethod === "CASH"
-        ? 0
-        : ev.paymentMethod === "CARD"
-          ? ev.total
-          : ev.posInput ?? 0;
-    if (posComputed > ev.total || ev.total < 0) {
+    if (ev.total < 0) {
       return NextResponse.json(
-        { error: "Invalid party event: POS ≤ Total, no negative values" },
+        { error: "Invalid party event: total must be ≥ 0" },
         { status: 400 }
       );
     }
@@ -224,8 +216,8 @@ export async function PATCH(
             staffId: r.staffId ?? null,
             operator: r.operator ?? null,
             total: r.total,
-            pos: r.pos,
-            cash: r.cash,
+            pos: r.pos ?? 0,
+            cash: r.cash ?? r.total,
           })),
         });
       }
@@ -234,22 +226,15 @@ export async function PATCH(
     if (body.partyEvents !== undefined) {
       await tx.partyEvent.deleteMany({ where: { dayId: day!.id } });
       for (const ev of body.partyEvents) {
-        const posComputed =
-          ev.paymentMethod === "CASH"
-            ? 0
-            : ev.paymentMethod === "CARD"
-              ? ev.total
-              : ev.posInput ?? 0;
-        const cashComputed = ev.total - posComputed;
         await tx.partyEvent.create({
           data: {
             dayId: day!.id,
             staffId: ev.staffId,
             total: ev.total,
-            paymentMethod: ev.paymentMethod,
-            posInput: ev.paymentMethod === "SPLIT" ? ev.posInput ?? null : null,
-            posComputed,
-            cashComputed,
+            paymentMethod: PaymentMethod.CASH,
+            posInput: null,
+            posComputed: 0,
+            cashComputed: ev.total,
             notes: ev.notes ?? null,
           },
         });
