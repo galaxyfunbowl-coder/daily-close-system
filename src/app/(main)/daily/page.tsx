@@ -390,6 +390,26 @@ export default function DailyPage() {
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-xs text-neutral-500 dark:text-neutral-400">Υπεύθυνος</label>
+                    <select
+                      value={line.staffId ?? ""}
+                      onChange={(e) => {
+                        const id = e.target.value || null;
+                        const s = staff.find((x) => x.id === id);
+                        updateRevenueLine(idx, {
+                          staffId: id || null,
+                          staffName: s?.name ?? null,
+                        });
+                      }}
+                      className="input-field mt-1 py-1.5 text-sm"
+                    >
+                      <option value="">—</option>
+                      {staff.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
                   {line.subLabel && line.subLabel !== "Regular" && (
                     <div>
                       <label className="block text-xs text-neutral-500 dark:text-neutral-400">Πληροφορία (π.χ. Εσωτερικό πρωταθλημα, Πανελλήνιο, ονομασία εκδήλωσης)</label>
