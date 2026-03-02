@@ -8,7 +8,7 @@ type Holiday = { id: string; date: string; name: string };
 type Closure = { id: string; date: string; reason: string };
 type FixedMonthlyExpense = { id: string; name: string; amount: number };
 
-type ElectronicOperatorRow = { key: string; name: string; active: boolean };
+type ElectronicOperatorRow = { id: string; name: string; active: boolean };
 type Tab = "staff" | "suppliers" | "electronic" | "payroll" | "fixed" | "holidays" | "closures";
 
 export default function AdminPage() {
@@ -356,27 +356,28 @@ function ElectronicOperatorsSection({
   loading: boolean;
   onSaved: () => void;
 }) {
-  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [saving, setSaving] = useState(false);
 
   function startEdit(op: ElectronicOperatorRow) {
-    setEditingKey(op.key);
+    setEditingId(op.id);
     setEditName(op.name);
   }
 
   function cancelEdit() {
-    setEditingKey(null);
+    setEditingId(null);
   }
 
   async function saveEdit() {
-    if (!editingKey || !editName.trim()) return;
+    if (!editingId || !editName.trim()) return;
     setSaving(true);
     try {
       const res = await fetch("/api/admin/electronic-operators", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: editingKey, name: editName.trim() }),
+        body: JSON.stringify({ id: editingId, name: editName.trim() }),
       });
       if (res.ok) {
         onSaved();
@@ -396,8 +397,45 @@ function ElectronicOperatorsSection({
       const res = await fetch("/api/admin/electronic-operators", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: op.key, active: !op.active }),
+        body: JSON.stringify({ id: op.id, active: !op.active }),
       });
+      if (res.ok) onSaved();
+      else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error ?? "Σφάλμα");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function addOperator(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/electronic-operators", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+      if (res.ok) {
+        setNewName("");
+        onSaved();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error ?? "Σφάλμα");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteOperator(op: ElectronicOperatorRow) {
+    if (!confirm(`Διαγραφή παροχού «${op.name}»; Οι γραμμές ηλεκτρονικών που τον χρησιμοποιούν θα μείνουν χωρίς παροχό.`)) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/electronic-operators?id=${encodeURIComponent(op.id)}`, { method: "DELETE" });
       if (res.ok) onSaved();
       else {
         const d = await res.json().catch(() => ({}));
@@ -411,31 +449,40 @@ function ElectronicOperatorsSection({
   return (
     <section className="card-section space-y-4">
       <p className="text-sm text-neutral-600 dark:text-neutral-400">
-        Οι operators ηλεκτρονικών εμφανίζονται στο Daily και στο Dashboard. Ενεργό = εμφανίζεται στην πρόσθεση γραμμής.
+        Πρόσθεσε ή αφαίρεσε παροχούς ηλεκτρονικών. Ενεργό = εμφανίζεται στο Daily στο dropdown.
       </p>
+      <form onSubmit={addOperator} className="flex gap-2">
+        <input
+          type="text"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Όνομα παροχού (π.χ. Adam Games)"
+          className="input-field flex-1 min-w-0"
+        />
+        <button type="submit" disabled={saving} className="btn-primary px-4 text-sm">Προσθήκη</button>
+      </form>
       {loading ? (
         <p className="text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
       ) : (
         <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
           {operators.map((op) => (
-            <li key={op.key} className="py-2">
-              {editingKey === op.key ? (
+            <li key={op.id} className="py-2">
+              {editingId === op.id ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <input
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    placeholder="Όνομα operator"
+                    placeholder="Όνομα παροχού"
                     className="input-field flex-1 min-w-0"
                   />
                   <button type="button" onClick={saveEdit} disabled={saving || !editName.trim()} className="btn-primary text-sm px-3">Αποθήκευση</button>
                   <button type="button" onClick={cancelEdit} disabled={saving} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Ακύρωση</button>
                 </div>
               ) : (
-                <div className="flex justify-between items-center gap-2">
+                <div className="flex justify-between items-center gap-2 flex-wrap">
                   <span className={op.active ? "text-neutral-900 dark:text-neutral-100 font-medium" : "text-neutral-500 dark:text-neutral-400"}>
                     {op.name}
-                    <span className="text-neutral-400 dark:text-neutral-500 text-xs ml-1">({op.key})</span>
                   </span>
                   <span className="flex items-center gap-2">
                     <label className="flex items-center gap-1 text-sm text-neutral-700 dark:text-neutral-300">
@@ -448,6 +495,7 @@ function ElectronicOperatorsSection({
                       Ενεργό
                     </label>
                     <button type="button" onClick={() => startEdit(op)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Επεξεργασία</button>
+                    <button type="button" onClick={() => deleteOperator(op)} className="text-sm text-red-600 dark:text-red-400 hover:underline">Διαγραφή</button>
                   </span>
                 </div>
               )}

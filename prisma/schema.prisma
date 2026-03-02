@@ -26,15 +26,16 @@ model Day {
 }
 
 model RevenueLine {
-  id           String              @id @default(cuid())
+  id           String               @id @default(cuid())
   dayId        String
-  day          Day                 @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  day          Day                  @relation(fields: [dayId], references: [id], onDelete: Cascade)
   department   Department
   subLabel     String?
   subLabelInfo String?
   staffId      String?
-  staff        Staff?              @relation(fields: [staffId], references: [id], onDelete: SetNull)
-  operator     ElectronicOperator?
+  staff        Staff?               @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  operatorId   String?
+  operator     ElectronicOperator?  @relation(fields: [operatorId], references: [id], onDelete: SetNull)
   total        Float
   cash         Float
 }
@@ -91,10 +92,11 @@ model FixedMonthlyExpense {
   amount Float
 }
 
-model ElectronicOperatorConfig {
-  operator ElectronicOperator @id
-  name     String
-  active   Boolean @default(true)
+model ElectronicOperator {
+  id          String        @id @default(cuid())
+  name        String
+  active      Boolean       @default(true)
+  revenueLines RevenueLine[]
 }
 
 model Supplier {
@@ -124,12 +126,6 @@ enum Department {
   BAR
   SERVICE
   PROSHOP
-}
-
-enum ElectronicOperator {
-  ADAM_GAMES
-  TWOPLAY_GAMES
-  DIKA_MOU
 }
 
 enum PaymentMethod {

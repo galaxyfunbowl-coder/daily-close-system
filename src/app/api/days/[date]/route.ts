@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
-import {
-  Department,
-  ElectronicOperator,
-  PaymentMethod,
-} from "@prisma/client";
+import { Department, PaymentMethod } from "@prisma/client";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -30,7 +26,7 @@ export async function GET(
   let day = await prisma.day.findUnique({
     where: { date },
     include: {
-      revenueLines: { include: { staff: true } },
+      revenueLines: { include: { staff: true, operator: true } },
       partyEvents: { include: { staff: true } },
     },
   });
@@ -66,7 +62,7 @@ export async function GET(
         },
       },
       include: {
-        revenueLines: { include: { staff: true } },
+        revenueLines: { include: { staff: true, operator: true } },
         partyEvents: { include: { staff: true } },
       },
     });
@@ -77,31 +73,10 @@ export async function GET(
     orderBy: { name: "asc" },
   });
 
-  // Load electronic operator configs (labels + active flag)
-  let operatorConfigs = await prisma.electronicOperatorConfig.findMany({
+  const activeOperators = await prisma.electronicOperator.findMany({
+    where: { active: true },
     orderBy: { name: "asc" },
   });
-  if (operatorConfigs.length === 0) {
-    // Seed defaults once using constants
-    const { OPERATOR_LABELS, ELECTRONIC_OPERATORS } = await import("@/lib/constants");
-    await prisma.$transaction(async (tx) => {
-      for (const op of ELECTRONIC_OPERATORS) {
-        await tx.electronicOperatorConfig.upsert({
-          where: { operator: op },
-          update: {},
-          create: {
-            operator: op,
-            name: OPERATOR_LABELS[op] ?? op,
-            active: true,
-          },
-        });
-      }
-    });
-    operatorConfigs = await prisma.electronicOperatorConfig.findMany({
-      orderBy: { name: "asc" },
-    });
-  }
-  const activeOperators = operatorConfigs.filter((o) => o.active);
 
   return NextResponse.json({
     day: {
@@ -118,7 +93,8 @@ export async function GET(
         subLabelInfo: r.subLabelInfo ?? null,
         staffId: r.staffId ?? null,
         staffName: r.staff?.name ?? null,
-        operator: r.operator ?? null,
+        operatorId: r.operatorId ?? null,
+        operatorName: r.operator?.name ?? null,
         total: r.total,
         cash: r.cash,
       })),
@@ -135,10 +111,7 @@ export async function GET(
       })),
     },
     staff,
-    electronicOperators: activeOperators.map((o) => ({
-      key: o.operator,
-      name: o.name,
-    })),
+    electronicOperators: activeOperators.map((o) => ({ id: o.id, name: o.name })),
   });
 }
 
@@ -148,7 +121,7 @@ type RevenueLineInput = {
   subLabel?: string | null;
   subLabelInfo?: string | null;
   staffId?: string | null;
-  operator?: ElectronicOperator | null;
+  operatorId?: string | null;
   total: number;
   cash?: number;
 };
@@ -239,7 +212,7 @@ export async function PATCH(
             subLabel: r.subLabel ?? null,
             subLabelInfo: r.subLabelInfo ?? null,
             staffId: r.staffId ?? null,
-            operator: r.operator ?? null,
+            operatorId: r.operatorId ?? null,
             total: r.total,
             cash: r.cash ?? r.total,
           })),

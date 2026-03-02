@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import type { Department, ElectronicOperator, PaymentMethod } from "@prisma/client";
+import type { Department, PaymentMethod } from "@prisma/client";
 import { DEPARTMENT_LABELS, BOWLING_SUBLABELS } from "@/lib/constants";
 
 type Staff = { id: string; name: string };
-type ElectronicOperatorOption = { key: ElectronicOperator; name: string };
+type ElectronicOperatorOption = { id: string; name: string };
 
 type RevenueLineRow = {
   id: string;
@@ -15,7 +15,8 @@ type RevenueLineRow = {
   subLabelInfo: string | null;
   staffId: string | null;
   staffName: string | null;
-  operator: ElectronicOperator | null;
+  operatorId: string | null;
+  operatorName: string | null;
   total: number;
   cash: number;
 };
@@ -108,7 +109,8 @@ export default function DailyPage() {
       subLabelInfo: null,
       staffId: null,
       staffName: null,
-      operator: null,
+      operatorId: null,
+      operatorName: null,
       total: 0,
       cash: 0,
     };
@@ -138,7 +140,8 @@ export default function DailyPage() {
           subLabelInfo: null,
           staffId: null,
           staffName: null,
-          operator: null,
+          operatorId: null,
+          operatorName: null,
           total: 0,
           cash: 0,
         },
@@ -152,12 +155,13 @@ export default function DailyPage() {
     if (!day) return;
     const newLine: RevenueLineRow = {
       id: `new-${Date.now()}`,
-      department: type,
+          department: type,
       subLabel: null,
       subLabelInfo: null,
       staffId: null,
       staffName: null,
-      operator: null,
+      operatorId: null,
+      operatorName: null,
       total: 0,
       cash: 0,
     };
@@ -232,7 +236,7 @@ export default function DailyPage() {
             subLabel: r.subLabel,
             subLabelInfo: r.subLabelInfo,
             staffId: r.staffId,
-            operator: r.operator,
+            operatorId: r.operatorId,
             total: r.total,
           })),
           partyEvents: day.partyEvents.map((p) => ({
@@ -374,8 +378,8 @@ export default function DailyPage() {
                 <span className="font-medium text-neutral-800 dark:text-neutral-200">
                   {line.department === "RECEPTION_BOWLING" && line.subLabel
                     ? `${DEPARTMENT_LABELS.RECEPTION_BOWLING} — ${line.subLabel}${line.subLabelInfo ? ` — ${line.subLabelInfo}` : ""}`
-                    : line.department === "ELECTRONIC_GAMES" && line.operator
-                      ? `${DEPARTMENT_LABELS.ELECTRONIC_GAMES} — ${(electronicOperators.find((o) => o.key === line.operator)?.name) ?? line.operator}`
+                    : line.department === "ELECTRONIC_GAMES" && (line.operatorId || line.operatorName)
+                      ? `${DEPARTMENT_LABELS.ELECTRONIC_GAMES} — ${line.operatorName ?? electronicOperators.find((o) => o.id === line.operatorId)?.name ?? "—"}`
                       : DEPARTMENT_LABELS[line.department] ?? line.department}
                 </span>
                 {day.revenueLines.length > 1 && (
@@ -462,20 +466,19 @@ export default function DailyPage() {
                 <div className="space-y-1">
                   <label className="block text-xs text-neutral-500 dark:text-neutral-400">Λειτουργός / Εταιρεία Ηλεκτρονικών</label>
                   <select
-                    value={line.operator ?? ""}
+                    value={line.operatorId ?? ""}
                     onChange={(e) => {
-                      const key = e.target.value as ElectronicOperator | "";
-                      if (!key) {
-                        updateRevenueLine(idx, { operator: null });
-                      } else {
-                        updateRevenueLine(idx, { operator: key as ElectronicOperator });
-                      }
+                      const id = e.target.value || null;
+                      updateRevenueLine(idx, {
+                        operatorId: id,
+                        operatorName: id ? electronicOperators.find((o) => o.id === id)?.name ?? null : null,
+                      });
                     }}
                     className="input-field mt-1 py-1.5 text-sm"
                   >
                     <option value="">—</option>
                     {electronicOperators.map((op) => (
-                      <option key={op.key} value={op.key}>{op.name}</option>
+                      <option key={op.id} value={op.id}>{op.name}</option>
                     ))}
                   </select>
                 </div>
