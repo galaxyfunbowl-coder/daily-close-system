@@ -8,26 +8,30 @@ type Holiday = { id: string; date: string; name: string };
 type Closure = { id: string; date: string; reason: string };
 type FixedMonthlyExpense = { id: string; name: string; amount: number };
 
-type Tab = "staff" | "suppliers" | "payroll" | "fixed" | "holidays" | "closures";
+type ElectronicOperatorRow = { key: string; name: string; active: boolean };
+type Tab = "staff" | "suppliers" | "electronic" | "payroll" | "fixed" | "holidays" | "closures";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("staff");
   const [staff, setStaff] = useState<Staff[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [electronicOperators, setElectronicOperators] = useState<ElectronicOperatorRow[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [closures, setClosures] = useState<Closure[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [s, sup, h, c] = await Promise.all([
+    const [s, sup, ops, h, c] = await Promise.all([
       fetch("/api/admin/staff").then((r) => r.json()),
       fetch("/api/admin/suppliers").then((r) => r.json()),
+      fetch("/api/admin/electronic-operators").then((r) => r.json()),
       fetch("/api/admin/holidays").then((r) => r.json()),
       fetch("/api/admin/closures").then((r) => r.json()),
     ]);
     setStaff(Array.isArray(s) ? s : []);
     setSuppliers(Array.isArray(sup) ? sup : []);
+    setElectronicOperators(Array.isArray(ops) ? ops : []);
     setHolidays(Array.isArray(h) ? h : []);
     setClosures(Array.isArray(c) ? c : []);
     setLoading(false);
@@ -42,7 +46,7 @@ export default function AdminPage() {
       <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Διαχείριση</h1>
 
       <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-700 flex-wrap">
-        {(["staff", "suppliers", "payroll", "fixed", "holidays", "closures"] as const).map((t) => (
+        {(["staff", "suppliers", "electronic", "payroll", "fixed", "holidays", "closures"] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -55,6 +59,7 @@ export default function AdminPage() {
           >
             {t === "staff" && "Προσωπικό"}
             {t === "suppliers" && "Προμηθευτές"}
+            {t === "electronic" && "Ηλεκτρονικά"}
             {t === "payroll" && "Μισθοδοσία"}
             {t === "fixed" && "Πάγια έξοδα"}
             {t === "holidays" && "Αργίες"}
@@ -68,6 +73,9 @@ export default function AdminPage() {
       )}
       {tab === "suppliers" && (
         <SuppliersSection suppliers={suppliers} loading={loading} onSaved={load} />
+      )}
+      {tab === "electronic" && (
+        <ElectronicOperatorsSection operators={electronicOperators} loading={loading} onSaved={load} />
       )}
       {tab === "payroll" && (
         <PayrollSection staff={staff} />
@@ -328,6 +336,118 @@ function SuppliersSection({
                   <span className="flex gap-2">
                     <button type="button" onClick={() => startEdit(s)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Επεξεργασία</button>
                     <button type="button" onClick={() => deleteSupplier(s.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">Διαγραφή</button>
+                  </span>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function ElectronicOperatorsSection({
+  operators,
+  loading,
+  onSaved,
+}: {
+  operators: ElectronicOperatorRow[];
+  loading: boolean;
+  onSaved: () => void;
+}) {
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  function startEdit(op: ElectronicOperatorRow) {
+    setEditingKey(op.key);
+    setEditName(op.name);
+  }
+
+  function cancelEdit() {
+    setEditingKey(null);
+  }
+
+  async function saveEdit() {
+    if (!editingKey || !editName.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/electronic-operators", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: editingKey, name: editName.trim() }),
+      });
+      if (res.ok) {
+        onSaved();
+        cancelEdit();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error ?? "Σφάλμα");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleActive(op: ElectronicOperatorRow) {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/electronic-operators", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: op.key, active: !op.active }),
+      });
+      if (res.ok) onSaved();
+      else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error ?? "Σφάλμα");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="card-section space-y-4">
+      <p className="text-sm text-neutral-600 dark:text-neutral-400">
+        Οι operators ηλεκτρονικών εμφανίζονται στο Daily και στο Dashboard. Ενεργό = εμφανίζεται στην πρόσθεση γραμμής.
+      </p>
+      {loading ? (
+        <p className="text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
+      ) : (
+        <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
+          {operators.map((op) => (
+            <li key={op.key} className="py-2">
+              {editingKey === op.key ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Όνομα operator"
+                    className="input-field flex-1 min-w-0"
+                  />
+                  <button type="button" onClick={saveEdit} disabled={saving || !editName.trim()} className="btn-primary text-sm px-3">Αποθήκευση</button>
+                  <button type="button" onClick={cancelEdit} disabled={saving} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Ακύρωση</button>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center gap-2">
+                  <span className={op.active ? "text-neutral-900 dark:text-neutral-100 font-medium" : "text-neutral-500 dark:text-neutral-400"}>
+                    {op.name}
+                    <span className="text-neutral-400 dark:text-neutral-500 text-xs ml-1">({op.key})</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <label className="flex items-center gap-1 text-sm text-neutral-700 dark:text-neutral-300">
+                      <input
+                        type="checkbox"
+                        checked={op.active}
+                        onChange={() => toggleActive(op)}
+                        disabled={saving}
+                      />
+                      Ενεργό
+                    </label>
+                    <button type="button" onClick={() => startEdit(op)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Επεξεργασία</button>
                   </span>
                 </div>
               )}
