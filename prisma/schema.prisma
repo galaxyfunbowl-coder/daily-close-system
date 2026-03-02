@@ -91,6 +91,12 @@ model FixedMonthlyExpense {
   amount Float
 }
 
+model ElectronicOperatorConfig {
+  operator ElectronicOperator @id
+  name     String
+  active   Boolean @default(true)
+}
+
 model Supplier {
   id              String   @id @default(cuid())
   name            String

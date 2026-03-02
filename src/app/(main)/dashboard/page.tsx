@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { OPERATOR_LABELS } from "@/lib/constants";
-import type { ElectronicOperator } from "@prisma/client";
 
 type DashboardData = {
   month: string;
@@ -169,8 +167,8 @@ export default function DashboardPage() {
               <p className="text-neutral-500 dark:text-neutral-400 text-sm">—</p>
             ) : (
               <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
-                {Object.entries(data.electronicByOperator).map(([k, v]) => (
-                  <li key={k}>{OPERATOR_LABELS[k as ElectronicOperator] ?? k}: {v.toFixed(2)} €</li>
+                {Object.entries(data.electronicByOperator).map(([name, v]) => (
+                  <li key={name}>{name}: {v.toFixed(2)} €</li>
                 ))}
               </ul>
             )}

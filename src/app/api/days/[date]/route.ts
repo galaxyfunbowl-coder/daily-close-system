@@ -6,7 +6,6 @@ import {
   ElectronicOperator,
   PaymentMethod,
 } from "@prisma/client";
-import { ELECTRONIC_OPERATORS } from "@/lib/constants";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -78,6 +77,32 @@ export async function GET(
     orderBy: { name: "asc" },
   });
 
+  // Load electronic operator configs (labels + active flag)
+  let operatorConfigs = await prisma.electronicOperatorConfig.findMany({
+    orderBy: { name: "asc" },
+  });
+  if (operatorConfigs.length === 0) {
+    // Seed defaults once using constants
+    const { OPERATOR_LABELS, ELECTRONIC_OPERATORS } = await import("@/lib/constants");
+    await prisma.$transaction(async (tx) => {
+      for (const op of ELECTRONIC_OPERATORS) {
+        await tx.electronicOperatorConfig.upsert({
+          where: { operator: op },
+          update: {},
+          create: {
+            operator: op,
+            name: OPERATOR_LABELS[op] ?? op,
+            active: true,
+          },
+        });
+      }
+    });
+    operatorConfigs = await prisma.electronicOperatorConfig.findMany({
+      orderBy: { name: "asc" },
+    });
+  }
+  const activeOperators = operatorConfigs.filter((o) => o.active);
+
   return NextResponse.json({
     day: {
       id: day.id,
@@ -110,6 +135,10 @@ export async function GET(
       })),
     },
     staff,
+    electronicOperators: activeOperators.map((o) => ({
+      key: o.operator,
+      name: o.name,
+    })),
   });
 }
 

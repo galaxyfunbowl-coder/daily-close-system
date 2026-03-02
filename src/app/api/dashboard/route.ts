@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
-import { Department, StaffRole } from "@prisma/client";
+import { Department, ElectronicOperator, StaffRole } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth();
@@ -37,6 +37,11 @@ export async function GET(request: NextRequest) {
   });
   const fixedTotal = fixedRows.reduce((s, r) => s + r.amount, 0);
 
+  const operatorConfigs = await prisma.electronicOperatorConfig.findMany();
+  const operatorNameByKey = new Map<ElectronicOperator, string>();
+  for (const c of operatorConfigs) {
+    operatorNameByKey.set(c.operator, c.name);
+  }
   const servers = await prisma.staff.findMany({
     where: { role: StaffRole.SERVER },
     orderBy: { name: "asc" },
@@ -79,8 +84,8 @@ export async function GET(request: NextRequest) {
         const key = r.subLabel ?? "Regular";
         bowlingBySubLabel[key] = (bowlingBySubLabel[key] ?? 0) + r.total;
       } else if (r.department === Department.ELECTRONIC_GAMES && r.operator) {
-        const key = r.operator;
-        electronicByOperator[key] = (electronicByOperator[key] ?? 0) + r.total;
+        const name = operatorNameByKey.get(r.operator) ?? r.operator;
+        electronicByOperator[name] = (electronicByOperator[name] ?? 0) + r.total;
       } else if (r.department === Department.PAIDOTOPOS) {
         playgroundTotal += r.total;
       } else if (r.department === Department.BILIARDA) {

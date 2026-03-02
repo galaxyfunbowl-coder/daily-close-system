@@ -11,6 +11,7 @@ import {
 } from "@/lib/constants";
 
 type Staff = { id: string; name: string };
+type ElectronicOperatorOption = { key: ElectronicOperator; name: string };
 
 type RevenueLineRow = {
   id: string;
@@ -68,6 +69,7 @@ export default function DailyPage() {
   });
   const [day, setDay] = useState<DayData | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [electronicOperators, setElectronicOperators] = useState<ElectronicOperatorOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -84,6 +86,7 @@ export default function DailyPage() {
       const data = await res.json();
       setDay(data.day);
       setStaff(data.staff ?? []);
+      setElectronicOperators(data.electronicOperators ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
       setDay(null);
@@ -99,6 +102,25 @@ export default function DailyPage() {
   function updateDay(fields: Partial<DayData>) {
     if (!day) return;
     setDay({ ...day, ...fields });
+  }
+
+  function addElectronicLine(operatorKey: ElectronicOperator) {
+    if (!day) return;
+    const newLine: RevenueLineRow = {
+      id: `new-${Date.now()}`,
+      department: "ELECTRONIC_GAMES",
+      subLabel: null,
+      subLabelInfo: null,
+      staffId: null,
+      staffName: null,
+      operator: operatorKey,
+      total: 0,
+      cash: 0,
+    };
+    setDay({
+      ...day,
+      revenueLines: [...day.revenueLines, newLine],
+    });
   }
 
   function updateRevenueLine(index: number, fields: Partial<RevenueLineRow>) {
@@ -130,19 +152,17 @@ export default function DailyPage() {
   }
 
   function addRevenueLineByType(
-    type: "PAIDOTOPOS" | "BILIARDA" | "BAR" | "SERVICE" | "PROSHOP" | ElectronicOperator
+    type: "PAIDOTOPOS" | "BILIARDA" | "BAR" | "SERVICE" | "PROSHOP"
   ) {
     if (!day) return;
-    const isElectronic = type === "ADAM_GAMES" || type === "TWOPLAY_GAMES" || type === "DIKA_MOU";
-    const department = (isElectronic ? "ELECTRONIC_GAMES" : type) as Department;
     const newLine: RevenueLineRow = {
       id: `new-${Date.now()}`,
-      department,
+      department: type,
       subLabel: null,
       subLabelInfo: null,
       staffId: null,
       staffName: null,
-      operator: isElectronic ? type : null,
+      operator: null,
       total: 0,
       cash: 0,
     };
@@ -360,7 +380,7 @@ export default function DailyPage() {
                   {line.department === "RECEPTION_BOWLING" && line.subLabel
                     ? `${DEPARTMENT_LABELS.RECEPTION_BOWLING} — ${line.subLabel}${line.subLabelInfo ? ` — ${line.subLabelInfo}` : ""}`
                     : line.department === "ELECTRONIC_GAMES" && line.operator
-                      ? `${DEPARTMENT_LABELS.ELECTRONIC_GAMES} — ${OPERATOR_LABELS[line.operator]}`
+                      ? `${DEPARTMENT_LABELS.ELECTRONIC_GAMES} — ${(electronicOperators.find((o) => o.key === line.operator)?.name) ?? line.operator}`
                       : DEPARTMENT_LABELS[line.department] ?? line.department}
                 </span>
                 {day.revenueLines.length > 1 && (
@@ -444,9 +464,26 @@ export default function DailyPage() {
                 </div>
               )}
               {line.department === "ELECTRONIC_GAMES" && (
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {line.operator ? OPERATOR_LABELS[line.operator] : "—"}
-                </p>
+                <div className="space-y-1">
+                  <label className="block text-xs text-neutral-500 dark:text-neutral-400">Λειτουργός / Εταιρεία Ηλεκτρονικών</label>
+                  <select
+                    value={line.operator ?? ""}
+                    onChange={(e) => {
+                      const key = e.target.value as ElectronicOperator | "";
+                      if (!key) {
+                        updateRevenueLine(idx, { operator: null });
+                      } else {
+                        updateRevenueLine(idx, { operator: key as ElectronicOperator });
+                      }
+                    }}
+                    className="input-field mt-1 py-1.5 text-sm"
+                  >
+                    <option value="">—</option>
+                    {electronicOperators.map((op) => (
+                      <option key={op.key} value={op.key}>{op.name}</option>
+                    ))}
+                  </select>
+                </div>
               )}
               <div>
                 <label className="block text-xs text-neutral-500 dark:text-neutral-400">Σύνολο (€)</label>
@@ -482,7 +519,10 @@ export default function DailyPage() {
                 else if (v === "BAR") addRevenueLineByType("BAR");
                 else if (v === "SERVICE") addRevenueLineByType("SERVICE");
                 else if (v === "PROSHOP") addRevenueLineByType("PROSHOP");
-                else if (v === "ADAM_GAMES" || v === "TWOPLAY_GAMES" || v === "DIKA_MOU") addRevenueLineByType(v);
+                else if (v.startsWith("ELECTRONIC:")) {
+                  const key = v.slice("ELECTRONIC:".length) as ElectronicOperator;
+                  addElectronicLine(key);
+                }
                 e.target.value = "";
               }}
               className="input-field py-1.5 text-sm w-auto min-w-[180px]"
@@ -494,9 +534,9 @@ export default function DailyPage() {
               <option value="BAR">Bar</option>
               <option value="SERVICE">Service</option>
               <option value="PROSHOP">ProShop</option>
-              <option value="ADAM_GAMES">Ηλεκτρονικά — Adam Games</option>
-              <option value="TWOPLAY_GAMES">Ηλεκτρονικά — 2play Games</option>
-              <option value="DIKA_MOU">Ηλεκτρονικά — Δικά μου</option>
+              {electronicOperators.map((op) => (
+                <option key={op.key} value={`ELECTRONIC:${op.key}`}>Ηλεκτρονικά — {op.name}</option>
+              ))}
             </select>
           </div>
         </div>
