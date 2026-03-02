@@ -62,17 +62,16 @@ function weekdayLabel(dateStr: string): string {
 export default function DailyPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [date, setDate] = useState(todayISO);
+  const [date, setDate] = useState(() => {
+    const p = searchParams.get("date");
+    if (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) return p;
+    return todayISO();
+  });
   const [day, setDay] = useState<DayData | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const p = searchParams.get("date");
-    if (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) setDate(p);
-  }, [searchParams]);
 
   const loadDay = useCallback(async (d: string) => {
     setLoading(true);
@@ -271,7 +270,13 @@ export default function DailyPage() {
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setDate(next);
+                if (next && /^\d{4}-\d{2}-\d{2}$/.test(next)) {
+                  router.replace(`/daily?date=${next}`);
+                }
+              }}
               className="input-field mt-1"
             />
             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{weekdayLabel(date)}</p>
