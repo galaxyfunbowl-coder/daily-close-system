@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
-import { Department } from "@prisma/client";
+import { Department, StaffRole } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth();
@@ -37,6 +37,16 @@ export async function GET(request: NextRequest) {
   });
   const fixedTotal = fixedRows.reduce((s, r) => s + r.amount, 0);
 
+  const servers = await prisma.staff.findMany({
+    where: { role: StaffRole.SERVER },
+    orderBy: { name: "asc" },
+  });
+
+  const staffTotalsById = new Map<string, { staffId: string; staffName: string; total: number }>();
+  for (const s of servers) {
+    staffTotalsById.set(s.id, { staffId: s.id, staffName: s.name, total: 0 });
+  }
+
   let totalRevenue = 0;
   let totalPOS = 0;
   let totalCash = 0;
@@ -61,6 +71,10 @@ export async function GET(request: NextRequest) {
     partyCount += day.partyEvents.length;
 
     for (const r of day.revenueLines) {
+      if (r.staffId && r.staff?.role === StaffRole.SERVER) {
+        const agg = staffTotalsById.get(r.staffId);
+        if (agg) agg.total += r.total;
+      }
       if (r.department === Department.RECEPTION_BOWLING) {
         const key = r.subLabel ?? "Regular";
         bowlingBySubLabel[key] = (bowlingBySubLabel[key] ?? 0) + r.total;
@@ -77,6 +91,13 @@ export async function GET(request: NextRequest) {
         serviceTotal += r.total;
       } else if ((r.department as string) === "PROSHOP") {
         proshopTotal += r.total;
+      }
+    }
+
+    for (const p of day.partyEvents) {
+      if (p.staffId && p.staff.role === StaffRole.SERVER) {
+        const agg = staffTotalsById.get(p.staffId);
+        if (agg) agg.total += p.total;
       }
     }
   }
@@ -109,12 +130,15 @@ export async function GET(request: NextRequest) {
   prevExpenses = prevExpenseRows.reduce((s, e) => s + e.amount, 0);
   const prevNet = prevRevenue - prevExpenses;
 
+  const staffTotals = [...staffTotalsById.values()].sort((a, b) => b.total - a.total);
+
   return NextResponse.json({
     month,
     totalRevenue,
     totalExpenses,
     payrollTotal,
     fixedTotal,
+    staffTotals,
     netResult,
     totalPOS,
     totalCash,

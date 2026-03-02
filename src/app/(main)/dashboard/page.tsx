@@ -10,6 +10,7 @@ type DashboardData = {
   totalExpenses: number;
   payrollTotal: number;
   fixedTotal: number;
+  staffTotals: { staffId: string; staffName: string; total: number }[];
   netResult: number;
   totalPOS: number;
   totalCash: number;
@@ -192,6 +193,19 @@ export default function DashboardPage() {
               <li>Έσοδα πάρτυ: {data.partyRevenue.toFixed(2)} €</li>
               <li>Αριθμός πάρτυ: {data.partyCount}</li>
             </ul>
+          </section>
+
+          <section className="card-section">
+            <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Ταμείο ανά σερβιτόρο</h2>
+            {data.staffTotals.length === 0 ? (
+              <p className="text-neutral-500 dark:text-neutral-400 text-sm">—</p>
+            ) : (
+              <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
+                {data.staffTotals.map((s) => (
+                  <li key={s.staffId}>{s.staffName}: {s.total.toFixed(2)} €</li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className="card-section">
