@@ -3,12 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Department, ElectronicOperator, PaymentMethod } from "@prisma/client";
-import {
-  DEPARTMENT_LABELS,
-  OPERATOR_LABELS,
-  BOWLING_SUBLABELS,
-  ELECTRONIC_OPERATORS,
-} from "@/lib/constants";
+import { DEPARTMENT_LABELS, BOWLING_SUBLABELS } from "@/lib/constants";
 
 type Staff = { id: string; name: string };
 type ElectronicOperatorOption = { key: ElectronicOperator; name: string };
@@ -104,7 +99,7 @@ export default function DailyPage() {
     setDay({ ...day, ...fields });
   }
 
-  function addElectronicLine(operatorKey: ElectronicOperator) {
+  function addElectronicLine() {
     if (!day) return;
     const newLine: RevenueLineRow = {
       id: `new-${Date.now()}`,
@@ -113,7 +108,7 @@ export default function DailyPage() {
       subLabelInfo: null,
       staffId: null,
       staffName: null,
-      operator: operatorKey,
+      operator: null,
       total: 0,
       cash: 0,
     };
@@ -519,10 +514,7 @@ export default function DailyPage() {
                 else if (v === "BAR") addRevenueLineByType("BAR");
                 else if (v === "SERVICE") addRevenueLineByType("SERVICE");
                 else if (v === "PROSHOP") addRevenueLineByType("PROSHOP");
-                else if (v.startsWith("ELECTRONIC:")) {
-                  const key = v.slice("ELECTRONIC:".length) as ElectronicOperator;
-                  addElectronicLine(key);
-                }
+                else if (v === "ELECTRONIC") addElectronicLine();
                 e.target.value = "";
               }}
               className="input-field py-1.5 text-sm w-auto min-w-[180px]"
@@ -534,9 +526,7 @@ export default function DailyPage() {
               <option value="BAR">Bar</option>
               <option value="SERVICE">Service</option>
               <option value="PROSHOP">ProShop</option>
-              {electronicOperators.map((op) => (
-                <option key={op.key} value={`ELECTRONIC:${op.key}`}>Ηλεκτρονικά — {op.name}</option>
-              ))}
+              <option value="ELECTRONIC">Ηλεκτρονικά</option>
             </select>
           </div>
         </div>
