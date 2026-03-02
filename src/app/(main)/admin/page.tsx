@@ -6,8 +6,9 @@ type Staff = { id: string; name: string; role: string; active: boolean };
 type Supplier = { id: string; name: string; defaultCategory: string };
 type Holiday = { id: string; date: string; name: string };
 type Closure = { id: string; date: string; reason: string };
+type FixedMonthlyExpense = { id: string; name: string; amount: number };
 
-type Tab = "staff" | "suppliers" | "payroll" | "holidays" | "closures";
+type Tab = "staff" | "suppliers" | "payroll" | "fixed" | "holidays" | "closures";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("staff");
@@ -41,7 +42,7 @@ export default function AdminPage() {
       <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Διαχείριση</h1>
 
       <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-700 flex-wrap">
-        {(["staff", "suppliers", "payroll", "holidays", "closures"] as const).map((t) => (
+        {(["staff", "suppliers", "payroll", "fixed", "holidays", "closures"] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -55,6 +56,7 @@ export default function AdminPage() {
             {t === "staff" && "Προσωπικό"}
             {t === "suppliers" && "Προμηθευτές"}
             {t === "payroll" && "Μισθοδοσία"}
+            {t === "fixed" && "Πάγια έξοδα"}
             {t === "holidays" && "Αργίες"}
             {t === "closures" && "Κλεισίματα"}
           </button>
@@ -69,6 +71,9 @@ export default function AdminPage() {
       )}
       {tab === "payroll" && (
         <PayrollSection staff={staff} />
+      )}
+      {tab === "fixed" && (
+        <FixedExpensesSection />
       )}
       {tab === "holidays" && (
         <HolidaysSection holidays={holidays} loading={loading} onSaved={load} />
@@ -467,6 +472,208 @@ function PayrollSection({ staff }: { staff: Staff[] }) {
           <button type="button" onClick={save} disabled={saving} className="btn-primary text-sm px-4">
             {saving ? "Αποθήκευση..." : "Αποθήκευση"}
           </button>
+        </>
+      )}
+    </section>
+  );
+}
+
+function FixedExpensesSection() {
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2];
+  const [month, setMonth] = useState(currentMonthStr);
+  const [items, setItems] = useState<FixedMonthlyExpense[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [newName, setNewName] = useState("");
+  const [newAmount, setNewAmount] = useState("");
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+
+  const [y, m] = month.split("-").map(Number);
+
+  const setYearMonth = (year: number, monthNum: number) => {
+    setMonth(`${year}-${String(monthNum).padStart(2, "0")}`);
+  };
+
+  const loadItems = useCallback(async (mStr: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/fixed-expenses?month=${mStr}`);
+      if (res.ok) {
+        const d = await res.json();
+        setItems(Array.isArray(d.items) ? d.items : []);
+      } else {
+        setItems([]);
+      }
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadItems(month);
+  }, [month, loadItems]);
+
+  async function addItem(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    const amount = newAmount.trim() === "" ? 0 : parseFloat(newAmount) || 0;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/fixed-expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month, name: newName.trim(), amount }),
+      });
+      if (res.ok) {
+        setNewName("");
+        setNewAmount("");
+        loadItems(month);
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error ?? "Σφάλμα");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function startEdit(item: FixedMonthlyExpense) {
+    setEditingId(item.id);
+    setEditName(item.name);
+    setEditAmount(String(item.amount));
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function saveEdit() {
+    if (!editingId || !editName.trim()) return;
+    const amount = editAmount.trim() === "" ? 0 : parseFloat(editAmount) || 0;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/fixed-expenses/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editName.trim(), amount }),
+      });
+      if (res.ok) {
+        cancelEdit();
+        loadItems(month);
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error ?? "Σφάλμα");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteItem(id: string) {
+    if (!confirm("Διαγραφή παγίου εξόδου;")) return;
+    const res = await fetch(`/api/admin/fixed-expenses/${id}`, { method: "DELETE" });
+    if (res.ok) loadItems(month);
+    else {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error ?? "Σφάλμα");
+    }
+  }
+
+  const total = items.reduce((sum, i) => sum + i.amount, 0);
+
+  return (
+    <section className="card-section space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={m}
+          onChange={(e) => setYearMonth(y, Number(e.target.value))}
+          className="input-field text-sm w-auto min-w-[140px]"
+        >
+          {MONTH_NAMES.map((name, i) => (
+            <option key={name} value={i + 1}>{name}</option>
+          ))}
+        </select>
+        <select
+          value={y}
+          onChange={(e) => setYearMonth(Number(e.target.value), m)}
+          className="input-field text-sm w-auto min-w-[100px]"
+        >
+          {years.map((yr) => (
+            <option key={yr} value={yr}>{yr}</option>
+          ))}
+        </select>
+      </div>
+
+      <form onSubmit={addItem} className="flex flex-wrap gap-2 items-center">
+        <input
+          type="text"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Όνομα παγίου"
+          className="input-field flex-1 min-w-[140px]"
+        />
+        <input
+          type="number"
+          min={0}
+          step={0.01}
+          value={newAmount}
+          onChange={(e) => setNewAmount(e.target.value)}
+          placeholder="Ποσό (€)"
+          className="input-field w-28"
+        />
+        <button type="submit" disabled={saving} className="btn-primary px-4 text-sm">Προσθήκη</button>
+      </form>
+
+      {loading ? (
+        <p className="text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
+      ) : (
+        <>
+          <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
+            {items.map((item) => (
+              <li key={item.id} className="py-2">
+                {editingId === item.id ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="input-field flex-1 min-w-[140px]"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(e.target.value)}
+                      className="input-field w-28"
+                    />
+                    <button type="button" onClick={saveEdit} disabled={saving || !editName.trim()} className="btn-primary text-sm px-3">Αποθήκευση</button>
+                    <button type="button" onClick={cancelEdit} disabled={saving} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Ακύρωση</button>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-neutral-900 dark:text-neutral-100">
+                      {item.name} — {item.amount.toFixed(2)} €
+                    </span>
+                    <span className="flex gap-2">
+                      <button type="button" onClick={() => startEdit(item)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Επεξεργασία</button>
+                      <button type="button" onClick={() => deleteItem(item.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">Διαγραφή</button>
+                    </span>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            Σύνολο παγίων: <strong>{total.toFixed(2)} €</strong>
+          </p>
         </>
       )}
     </section>

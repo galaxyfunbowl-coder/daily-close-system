@@ -85,6 +85,13 @@ model StaffMonthlySalary {
   @@unique([staffId, month])
 }
 
+model FixedMonthlyExpense {
+  id     String @id @default(cuid())
+  month  String // YYYY-MM
+  name   String
+  amount Float
+}
+
 model Supplier {
   id              String   @id @default(cuid())
   name            String

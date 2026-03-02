@@ -9,6 +9,7 @@ type DashboardData = {
   totalRevenue: number;
   totalExpenses: number;
   payrollTotal: number;
+  fixedTotal: number;
   netResult: number;
   totalPOS: number;
   totalCash: number;
@@ -138,6 +139,9 @@ export default function DashboardPage() {
               <li><strong>Έξοδα:</strong> {data.totalExpenses.toFixed(2)} €</li>
               {data.payrollTotal > 0 && (
                 <li className="text-neutral-600 dark:text-neutral-400">— Μισθοδοσία: {data.payrollTotal.toFixed(2)} €</li>
+              )}
+              {data.fixedTotal > 0 && (
+                <li className="text-neutral-600 dark:text-neutral-400">— Πάγια έξοδα: {data.fixedTotal.toFixed(2)} €</li>
               )}
               <li><strong>Καθαρά:</strong> {data.netResult.toFixed(2)} €</li>
               <li><strong>POS σύνολο (από Z):</strong> {data.totalPOS.toFixed(2)} €</li>
