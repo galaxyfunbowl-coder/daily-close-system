@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
       amount: e.amount,
       paymentMethod: e.paymentMethod,
       notes: e.notes ?? "",
+      imagePath: e.imagePath ?? null,
     }))
   );
 }

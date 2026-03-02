@@ -12,6 +12,7 @@ type Expense = {
   amount: number;
   paymentMethod: string;
   notes: string;
+  imagePath: string | null;
 };
 
 type Supplier = { id: string; name: string; defaultCategory: string };
@@ -37,9 +38,11 @@ export default function ExpensesPage() {
     paymentMethod: "Μετρητά",
     notes: "",
   });
+  const [formImage, setFormImage] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ date: "", invoiceNumber: "", supplierId: "", category: "", amount: "", paymentMethod: "", notes: "" });
+  const [editImage, setEditImage] = useState<File | null>(null);
 
   const loadExpenses = useCallback(async () => {
     const params = new URLSearchParams();
@@ -90,6 +93,16 @@ export default function ExpensesPage() {
         alert(data.error ?? "Σφάλμα");
         return;
       }
+      const data = await res.json();
+      const newId = data.id;
+      if (newId && formImage) {
+        const fd = new FormData();
+        fd.append("file", formImage);
+        await fetch(`/api/expenses/${newId}/invoice-image`, {
+          method: "POST",
+          body: fd,
+        });
+      }
       setForm({
         date: todayISO(),
         invoiceNumber: "",
@@ -99,6 +112,7 @@ export default function ExpensesPage() {
         paymentMethod: form.paymentMethod,
         notes: "",
       });
+      setFormImage(null);
       loadExpenses();
     } finally {
       setSaving(false);
@@ -116,6 +130,7 @@ export default function ExpensesPage() {
 
   function startEdit(exp: Expense) {
     setEditingId(exp.id);
+    setEditImage(null);
     const pm = PAYMENT_METHODS.includes(exp.paymentMethod as (typeof PAYMENT_METHODS)[number])
       ? exp.paymentMethod
       : "Μετρητά";
@@ -147,16 +162,31 @@ export default function ExpensesPage() {
           notes: editForm.notes || null,
         }),
       });
-      if (res.ok) {
-        setEditingId(null);
-        loadExpenses();
-      } else {
+      if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         alert(data.error ?? "Σφάλμα");
+        return;
       }
+      if (editImage) {
+        const fd = new FormData();
+        fd.append("file", editImage);
+        await fetch(`/api/expenses/${editingId}/invoice-image`, {
+          method: "POST",
+          body: fd,
+        });
+      }
+      setEditingId(null);
+      setEditImage(null);
+      loadExpenses();
     } finally {
       setSaving(false);
     }
+  }
+
+  async function removeInvoiceImage(expenseId: string) {
+    if (!confirm("Αφαίρεση φωτογραφίας τιμολογίου;")) return;
+    const res = await fetch(`/api/expenses/${expenseId}/invoice-image`, { method: "DELETE" });
+    if (res.ok) loadExpenses();
   }
 
   async function deleteExpense(id: string) {
@@ -208,6 +238,17 @@ export default function ExpensesPage() {
             <label className="block text-sm text-neutral-600 dark:text-neutral-400">Σημειώσεις</label>
             <input type="text" value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className="input-field mt-1" />
           </div>
+          <div>
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Φωτογραφία τιμολογίου (προαιρετικό)</label>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="environment"
+              onChange={(e) => setFormImage(e.target.files?.[0] ?? null)}
+              className="mt-1 block w-full text-sm text-neutral-600 dark:text-neutral-400 file:mr-2 file:rounded file:border-0 file:bg-neutral-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-neutral-900 dark:file:bg-neutral-600 dark:file:text-neutral-100"
+            />
+            {formImage && <p className="mt-1 text-xs text-neutral-500">{formImage.name}</p>}
+          </div>
           <button type="submit" disabled={saving} className="btn-primary w-full">
             {saving ? "..." : "Προσθήκη"}
           </button>
@@ -248,6 +289,20 @@ export default function ExpensesPage() {
                       ))}
                     </select>
                     <input type="text" value={editForm.notes} onChange={(ev) => setEditForm((p) => ({ ...p, notes: ev.target.value }))} placeholder="Σημειώσεις" className="input-field text-sm" />
+                    <div>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400">Φωτογραφία τιμολογίου</label>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        capture="environment"
+                        onChange={(e) => setEditImage(e.target.files?.[0] ?? null)}
+                        className="mt-1 block w-full text-sm file:mr-2 file:rounded file:border-0 file:bg-neutral-200 file:px-2 file:py-1 file:text-xs dark:file:bg-neutral-600"
+                      />
+                      {editImage && <span className="text-xs text-neutral-500">{editImage.name}</span>}
+                      {e.imagePath && !editImage && (
+                        <button type="button" onClick={() => removeInvoiceImage(e.id)} className="mt-1 text-xs text-red-600 dark:text-red-400 hover:underline">Αφαίρεση φωτογραφίας</button>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       <button type="button" onClick={saveEdit} disabled={saving} className="btn-primary text-sm px-3 py-1.5">Αποθήκευση</button>
                       <button type="button" onClick={() => setEditingId(null)} className="rounded bg-neutral-200 dark:bg-neutral-600 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-100">Ακύρωση</button>
@@ -255,10 +310,20 @@ export default function ExpensesPage() {
                   </div>
                 ) : (
                   <div className="flex justify-between items-start gap-2">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="font-medium text-neutral-900 dark:text-neutral-100">{e.date}</p>
                       <p className="text-sm text-neutral-600 dark:text-neutral-400">{e.supplierName ?? e.category} — {e.amount.toFixed(2)} €</p>
                       {e.notes && <p className="text-xs text-neutral-500 dark:text-neutral-400">{e.notes}</p>}
+                      {e.imagePath && (
+                        <a
+                          href={`/api/expenses/${e.id}/invoice-image`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          📷 Τιμολόγιο
+                        </a>
+                      )}
                     </div>
                     <div className="flex gap-2 shrink-0">
                       <button type="button" onClick={() => startEdit(e)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Επεξεργασία</button>

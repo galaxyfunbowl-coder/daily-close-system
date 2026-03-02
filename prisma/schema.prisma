@@ -64,6 +64,7 @@ model Expense {
   amount        Float
   paymentMethod String
   notes         String?
+  imagePath     String?
 }
 
 model Staff {

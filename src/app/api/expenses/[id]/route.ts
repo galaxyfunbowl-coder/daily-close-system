@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
+import { unlink } from "fs/promises";
+import { existsSync } from "fs";
+import path from "path";
 
 export async function PATCH(
   request: NextRequest,
@@ -43,6 +46,16 @@ export async function DELETE(
   if (auth) return auth;
   const id = (await params).id;
   try {
+    const expense = await prisma.expense.findUnique({
+      where: { id },
+      select: { imagePath: true },
+    });
+    if (expense?.imagePath) {
+      const fullPath = path.join(process.cwd(), "data", expense.imagePath);
+      if (existsSync(fullPath)) {
+        await unlink(fullPath);
+      }
+    }
     await prisma.expense.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch {
