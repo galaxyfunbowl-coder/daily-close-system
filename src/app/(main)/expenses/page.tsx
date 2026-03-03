@@ -21,13 +21,34 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function currentMonthISO(): string {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function monthToFromTo(month: string): { from: string; to: string } {
+  if (!month || month.length !== 7) return { from: "2000-01-01", to: "2100-12-31" };
+  const [y, m] = month.split("-").map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  return {
+    from: `${month}-01`,
+    to: `${month}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+const MONTH_NAMES = ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"];
+
+function formatMonthLabel(month: string): string {
+  if (!month || month.length !== 7) return "";
+  const [y, m] = month.split("-").map(Number);
+  return `${MONTH_NAMES[m - 1]} ${y}`;
+}
+
 const PAYMENT_METHODS = ["Μετρητά", "Κάρτα", "Τραπεζική μεταφορά"] as const;
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [filterFrom, setFilterFrom] = useState("");
-  const [filterTo, setFilterTo] = useState("");
+  const [filterMonth, setFilterMonth] = useState(currentMonthISO());
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     date: todayISO(),
@@ -44,23 +65,23 @@ export default function ExpensesPage() {
   const [editForm, setEditForm] = useState({ date: "", invoiceNumber: "", supplierId: "", category: "", amount: "", paymentMethod: "", notes: "" });
   const [editImage, setEditImage] = useState<File | null>(null);
 
+  const { from, to } = monthToFromTo(filterMonth);
+
   const loadExpenses = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (filterFrom) params.set("from", filterFrom);
-    if (filterTo) params.set("to", filterTo);
+    const params = new URLSearchParams({ from, to });
     const res = await fetch(`/api/expenses?${params}`);
     if (res.ok) {
       const data = await res.json();
       setExpenses(data);
     }
-  }, [filterFrom, filterTo]);
+  }, [from, to]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
       const [expRes, supRes] = await Promise.all([
-        fetch(`/api/expenses?${new URLSearchParams({ from: filterFrom || "2000-01-01", to: filterTo || "2100-12-31" })}`),
+        fetch(`/api/expenses?${new URLSearchParams({ from, to })}`),
         fetch("/api/suppliers"),
       ]);
       if (cancelled) return;
@@ -69,7 +90,7 @@ export default function ExpensesPage() {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [filterFrom, filterTo]);
+  }, [from, to]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -271,15 +292,24 @@ export default function ExpensesPage() {
       </section>
 
       <section className="card-section">
-        <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Φίλτρο</h2>
-        <div className="flex gap-2 flex-wrap">
-          <input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="input-field" />
-          <input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="input-field" />
-        </div>
+        <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Μήνας</h2>
+        <input
+          type="month"
+          value={filterMonth}
+          onChange={(e) => setFilterMonth(e.target.value)}
+          className="input-field"
+        />
       </section>
 
       <section className="card-section overflow-hidden p-0">
-        <h2 className="p-3 font-medium text-neutral-700 dark:text-neutral-300 border-b border-neutral-200 dark:border-neutral-700">Κατάλογος</h2>
+        <h2 className="p-3 font-medium text-neutral-700 dark:text-neutral-300 border-b border-neutral-200 dark:border-neutral-700">
+          {formatMonthLabel(filterMonth)}
+          {!loading && (
+            <span className="ml-2 text-sm font-normal text-neutral-500 dark:text-neutral-400">
+              — {expenses.length} {expenses.length === 1 ? "τιμολόγιο" : "τιμολόγια"}
+            </span>
+          )}
+        </h2>
         {loading ? (
           <p className="p-4 text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
         ) : expenses.length === 0 ? (
