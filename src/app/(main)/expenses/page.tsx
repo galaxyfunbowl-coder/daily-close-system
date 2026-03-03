@@ -37,6 +37,13 @@ function monthToFromTo(month: string): { from: string; to: string } {
 
 const MONTH_NAMES = ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"];
 
+const YEARS: number[] = (() => {
+  const y = new Date().getFullYear();
+  const out: number[] = [];
+  for (let i = y - 5; i <= y + 1; i++) out.push(i);
+  return out;
+})();
+
 function formatMonthLabel(month: string): string {
   if (!month || month.length !== 7) return "";
   const [y, m] = month.split("-").map(Number);
@@ -293,12 +300,26 @@ export default function ExpensesPage() {
 
       <section className="card-section">
         <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Μήνας</h2>
-        <input
-          type="month"
-          value={filterMonth}
-          onChange={(e) => setFilterMonth(e.target.value)}
-          className="input-field"
-        />
+        <div className="flex gap-2">
+          <select
+            value={filterMonth.slice(5, 7)}
+            onChange={(e) => setFilterMonth((prev) => `${prev.slice(0, 4)}-${e.target.value}`)}
+            className="input-field flex-1"
+          >
+            {MONTH_NAMES.map((name, i) => (
+              <option key={name} value={String(i + 1).padStart(2, "0")}>{name}</option>
+            ))}
+          </select>
+          <select
+            value={filterMonth.slice(0, 4)}
+            onChange={(e) => setFilterMonth((prev) => `${e.target.value}-${prev.slice(5, 7)}`)}
+            className="input-field flex-1"
+          >
+            {YEARS.map((y) => (
+              <option key={y} value={String(y)}>{y}</option>
+            ))}
+          </select>
+        </div>
       </section>
 
       <section className="card-section overflow-hidden p-0">
