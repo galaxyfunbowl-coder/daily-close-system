@@ -254,7 +254,7 @@ export default function ExpensesPage() {
             <input type="text" value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className="input-field mt-1" />
           </div>
           <div>
-            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Τιμολόγιο PDF (προαιρετικό)</label>
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Φωτογραφία ή PDF τιμολογίου (προαιρετικό)</label>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,application/pdf"
@@ -305,7 +305,7 @@ export default function ExpensesPage() {
                     </select>
                     <input type="text" value={editForm.notes} onChange={(ev) => setEditForm((p) => ({ ...p, notes: ev.target.value }))} placeholder="Σημειώσεις" className="input-field text-sm" />
                     <div>
-                      <label className="block text-xs text-neutral-500 dark:text-neutral-400">Τιμολόγιο PDF</label>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400">Φωτογραφία/PDF τιμολογίου</label>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp,application/pdf"
