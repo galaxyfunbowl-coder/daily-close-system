@@ -27,7 +27,7 @@ export async function PATCH(
     if (typeof body.invoiceNumber === "string") data.invoiceNumber = body.invoiceNumber.trim();
     if (body.supplierId !== undefined) data.supplierId = body.supplierId || null;
     if (typeof body.category === "string") data.category = body.category.trim();
-    if (typeof body.amount === "number" && body.amount >= 0) data.amount = body.amount;
+    if (typeof body.amount === "number" && !Number.isNaN(body.amount)) data.amount = body.amount;
     if (typeof body.paymentMethod === "string") data.paymentMethod = body.paymentMethod.trim();
     if (body.notes !== undefined) data.notes = body.notes === "" ? null : body.notes;
 

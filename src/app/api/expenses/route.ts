@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const paymentMethod = typeof body.paymentMethod === "string" ? body.paymentMethod.trim() : "";
     const notes = typeof body.notes === "string" ? body.notes.trim() : null;
 
-    if (Number.isNaN(amount) || amount < 0) {
+    if (Number.isNaN(amount)) {
       return NextResponse.json({ error: "Valid amount required" }, { status: 400 });
     }
 

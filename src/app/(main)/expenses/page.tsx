@@ -224,7 +224,7 @@ export default function ExpensesPage() {
           </div>
           <div>
             <label className="block text-sm text-neutral-600 dark:text-neutral-400">Ποσό</label>
-            <input type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} className="input-field mt-1" required />
+            <input type="number" step="0.01" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} placeholder="Ποσό (αρνητικό για πιστωτικό)" className="input-field mt-1" required />
           </div>
           <div>
             <label className="block text-sm text-neutral-600 dark:text-neutral-400">Τρόπος πληρωμής</label>
@@ -282,7 +282,7 @@ export default function ExpensesPage() {
                       {suppliers.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
                     </select>
                     <input type="text" value={editForm.category} onChange={(ev) => setEditForm((p) => ({ ...p, category: ev.target.value }))} placeholder="Κατηγορία" className="input-field text-sm" />
-                    <input type="number" step="0.01" min="0" value={editForm.amount} onChange={(ev) => setEditForm((p) => ({ ...p, amount: ev.target.value }))} className="input-field text-sm" />
+                    <input type="number" step="0.01" value={editForm.amount} onChange={(ev) => setEditForm((p) => ({ ...p, amount: ev.target.value }))} placeholder="Ποσό (− για πιστωτικό)" className="input-field text-sm" />
                     <select value={editForm.paymentMethod} onChange={(ev) => setEditForm((p) => ({ ...p, paymentMethod: ev.target.value }))} className="input-field text-sm">
                       {PAYMENT_METHODS.map((pm) => (
                         <option key={pm} value={pm}>{pm}</option>
@@ -312,7 +312,7 @@ export default function ExpensesPage() {
                   <div className="flex justify-between items-start gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-neutral-900 dark:text-neutral-100">{e.date}</p>
-                      <p className="text-sm text-neutral-600 dark:text-neutral-400">{e.supplierName ?? e.category} — {e.amount.toFixed(2)} €</p>
+                      <p className={`text-sm ${e.amount < 0 ? "text-green-600 dark:text-green-400" : "text-neutral-600 dark:text-neutral-400"}`}>{e.supplierName ?? e.category} — {e.amount >= 0 ? "" : "−"}{Math.abs(e.amount).toFixed(2)} €{e.amount < 0 ? " (πιστωτικό)" : ""}</p>
                       {e.notes && <p className="text-xs text-neutral-500 dark:text-neutral-400">{e.notes}</p>}
                       {e.imagePath && (
                         <a
