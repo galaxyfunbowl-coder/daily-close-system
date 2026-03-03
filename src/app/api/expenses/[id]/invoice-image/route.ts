@@ -5,16 +5,14 @@ import {
   extractInvoiceDataFromPdf,
   extractInvoiceDataFromImage,
 } from "@/lib/extract-invoice-number";
+import { convertImageToPdf } from "@/lib/image-to-pdf";
 import { writeFile, readFile, unlink, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
-import sharp from "sharp";
 
 const UPLOAD_DIR = "invoice-images";
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
-const MAX_WIDTH = 1920;
-const JPEG_QUALITY = 85;
 
 function getUploadDir(): string {
   const dataDir = path.join(process.cwd(), "data");
@@ -127,17 +125,13 @@ export async function POST(
     const arrayBuffer = await file.arrayBuffer();
     const inputBuffer = Buffer.from(arrayBuffer);
     const isPdf = file.type === "application/pdf";
-    const ext = isPdf ? ".pdf" : ".jpg";
-    const filename = buildInvoiceFilename(expense, ext);
+    const filename = buildInvoiceFilename(expense, ".pdf");
     const filePath = path.join(getUploadDir(), filename);
     if (isPdf) {
       await writeFile(filePath, inputBuffer);
     } else {
-      const compressed = await sharp(inputBuffer)
-        .resize(MAX_WIDTH, undefined, { withoutEnlargement: true })
-        .jpeg({ quality: JPEG_QUALITY })
-        .toBuffer();
-      await writeFile(filePath, compressed);
+      const pdfBuffer = await convertImageToPdf(inputBuffer, file.type);
+      await writeFile(filePath, pdfBuffer);
     }
     const imagePath = `${UPLOAD_DIR}/${filename}`;
     const extracted =
