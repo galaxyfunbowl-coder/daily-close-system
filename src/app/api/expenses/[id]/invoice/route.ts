@@ -143,24 +143,34 @@ export async function POST(
       await writeFile(filePath, pdfBuffer);
     }
     const imagePath = `${UPLOAD_DIR}/${subfolder}/${filename}`;
-    const extracted =
-      isPdf
-        ? await extractInvoiceDataFromPdf(inputBuffer)
-        : await extractInvoiceDataFromImage(inputBuffer);
-    const updateData: { imagePath: string; invoiceNumber?: string; amount?: number } = {
-      imagePath,
-    };
-    if (extracted.invoiceNumber) updateData.invoiceNumber = extracted.invoiceNumber;
-    if (extracted.amount !== null) updateData.amount = extracted.amount;
     await prisma.expense.update({
       where: { id },
-      data: updateData,
+      data: { imagePath },
     });
+
+    // OCR is slow (15–60s for images); run in background so upload returns quickly
+    void (async () => {
+      try {
+        const extracted =
+          isPdf
+            ? await extractInvoiceDataFromPdf(inputBuffer)
+            : await extractInvoiceDataFromImage(inputBuffer);
+        const updateData: { invoiceNumber?: string; amount?: number } = {};
+        if (extracted.invoiceNumber) updateData.invoiceNumber = extracted.invoiceNumber;
+        if (extracted.amount !== null) updateData.amount = extracted.amount;
+        if (Object.keys(updateData).length > 0) {
+          await prisma.expense.update({ where: { id }, data: updateData });
+        }
+      } catch {
+        // ignore extraction errors
+      }
+    })();
+
     return NextResponse.json({
       ok: true,
       imagePath,
-      extractedInvoiceNumber: extracted.invoiceNumber ?? undefined,
-      extractedAmount: extracted.amount ?? undefined,
+      extractedInvoiceNumber: undefined,
+      extractedAmount: undefined,
     });
   } catch (e) {
     console.error(e);
