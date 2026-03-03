@@ -6,6 +6,7 @@ import {
   extractInvoiceDataFromImage,
 } from "@/lib/extract-invoice-number";
 import { convertImageToPdf } from "@/lib/image-to-pdf";
+import { compressPdfBuffer } from "@/lib/compress-pdf";
 import { writeFile, readFile, unlink, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
@@ -137,9 +138,11 @@ export async function POST(
     const filename = buildInvoiceFilename(expense, ".pdf");
     const filePath = path.join(uploadDir, filename);
     if (isPdf) {
-      await writeFile(filePath, inputBuffer);
+      const compressed = await compressPdfBuffer(inputBuffer);
+      await writeFile(filePath, compressed);
     } else {
-      const pdfBuffer = await convertImageToPdf(inputBuffer, file.type);
+      let pdfBuffer = await convertImageToPdf(inputBuffer, file.type);
+      pdfBuffer = await compressPdfBuffer(pdfBuffer);
       await writeFile(filePath, pdfBuffer);
     }
     const imagePath = `${UPLOAD_DIR}/${subfolder}/${filename}`;

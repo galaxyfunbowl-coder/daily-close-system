@@ -5,36 +5,26 @@
 import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
 
-const MAX_WIDTH = 1920;
-const JPEG_QUALITY = 85;
+const MAX_WIDTH = 1280;
+const JPEG_QUALITY = 72;
 
 export async function convertImageToPdf(buffer: Buffer, mimeType: string): Promise<Buffer> {
   const img = sharp(buffer);
   const meta = await img.metadata();
-  const width = meta.width ?? 1920;
-  const height = meta.height ?? 1080;
+  const width = meta.width ?? 1280;
+  const height = meta.height ?? 720;
 
   let imageBuffer: Buffer;
-  let embedFn: "embedJpg" | "embedPng";
-
   if (mimeType === "image/jpeg") {
     imageBuffer = await img
       .resize(MAX_WIDTH, undefined, { withoutEnlargement: true })
       .jpeg({ quality: JPEG_QUALITY })
       .toBuffer();
-    embedFn = "embedJpg";
-  } else if (mimeType === "image/png") {
+  } else if (mimeType === "image/png" || mimeType === "image/webp") {
     imageBuffer = await img
       .resize(MAX_WIDTH, undefined, { withoutEnlargement: true })
-      .png()
+      .jpeg({ quality: JPEG_QUALITY })
       .toBuffer();
-    embedFn = "embedPng";
-  } else if (mimeType === "image/webp") {
-    imageBuffer = await img
-      .resize(MAX_WIDTH, undefined, { withoutEnlargement: true })
-      .png()
-      .toBuffer();
-    embedFn = "embedPng";
   } else {
     throw new Error(`Unsupported image type: ${mimeType}`);
   }
@@ -46,7 +36,7 @@ export async function convertImageToPdf(buffer: Buffer, mimeType: string): Promi
 
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([pageWidth, pageHeight]);
-  const embedded = await pdfDoc[embedFn](imageBuffer);
+  const embedded = await pdfDoc.embedJpg(imageBuffer);
   page.drawImage(embedded, {
     x: 0,
     y: 0,
