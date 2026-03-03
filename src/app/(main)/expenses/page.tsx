@@ -199,7 +199,7 @@ export default function ExpensesPage() {
   }
 
   async function removeInvoiceImage(expenseId: string) {
-    if (!confirm("Αφαίρεση φωτογραφίας τιμολογίου;")) return;
+    if (!confirm("Αφαίρεση τιμολογίου;")) return;
     const res = await fetch(`/api/expenses/${expenseId}/invoice`, { method: "DELETE" });
     if (res.ok) loadExpenses();
   }
@@ -254,7 +254,7 @@ export default function ExpensesPage() {
             <input type="text" value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className="input-field mt-1" />
           </div>
           <div>
-            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Φωτογραφία/PDF τιμολογίου (προαιρετικό)</label>
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Τιμολόγιο PDF (προαιρετικό)</label>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,application/pdf"
@@ -305,7 +305,7 @@ export default function ExpensesPage() {
                     </select>
                     <input type="text" value={editForm.notes} onChange={(ev) => setEditForm((p) => ({ ...p, notes: ev.target.value }))} placeholder="Σημειώσεις" className="input-field text-sm" />
                     <div>
-                      <label className="block text-xs text-neutral-500 dark:text-neutral-400">Φωτογραφία/PDF τιμολογίου</label>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400">Τιμολόγιο PDF</label>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp,application/pdf"
@@ -315,7 +315,7 @@ export default function ExpensesPage() {
                       />
                       {editImage && <span className="text-xs text-neutral-500">{editImage.name}</span>}
                       {e.imagePath && !editImage && (
-                        <button type="button" onClick={() => removeInvoiceImage(e.id)} className="mt-1 text-xs text-red-600 dark:text-red-400 hover:underline">Αφαίρεση φωτογραφίας</button>
+                        <button type="button" onClick={() => removeInvoiceImage(e.id)} className="mt-1 text-xs text-red-600 dark:text-red-400 hover:underline">Αφαίρεση τιμολογίου</button>
                       )}
                     </div>
                     <div className="flex gap-2">
@@ -336,7 +336,7 @@ export default function ExpensesPage() {
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
                         >
-                          {e.imagePath.toLowerCase().endsWith(".pdf") ? "📄" : "📷"} Τιμολόγιο
+                          📄 Τιμολόγιο
                         </a>
                       )}
                     </div>
