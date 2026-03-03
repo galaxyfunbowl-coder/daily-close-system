@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
 
+import { getNextXtNumber } from "@/lib/next-xt-number";
+
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(request: NextRequest) {
@@ -53,7 +55,10 @@ export async function POST(request: NextRequest) {
     if (!date) {
       return NextResponse.json({ error: "Valid date (YYYY-MM-DD) required" }, { status: 400 });
     }
-    const invoiceNumber = typeof body.invoiceNumber === "string" ? body.invoiceNumber.trim() : null;
+    let invoiceNumber: string | null = typeof body.invoiceNumber === "string" ? body.invoiceNumber.trim() : null;
+    if (body.noInvoice === true && (!invoiceNumber || invoiceNumber === "")) {
+      invoiceNumber = await getNextXtNumber();
+    }
     const supplierId = typeof body.supplierId === "string" && body.supplierId ? body.supplierId : null;
     const category = typeof body.category === "string" ? body.category.trim() : "";
     const amount = typeof body.amount === "number" ? body.amount : parseFloat(body.amount);

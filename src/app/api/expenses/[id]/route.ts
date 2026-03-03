@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
+import { getNextXtNumber, isXtInvoiceNumber } from "@/lib/next-xt-number";
 import { unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
@@ -16,7 +17,7 @@ export async function PATCH(
     const body = await request.json();
     const data: {
       date?: string;
-      invoiceNumber?: string;
+      invoiceNumber?: string | null;
       supplierId?: string | null;
       category?: string;
       amount?: number;
@@ -24,7 +25,16 @@ export async function PATCH(
       notes?: string | null;
     } = {};
     if (typeof body.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)) data.date = body.date;
-    if (typeof body.invoiceNumber === "string") data.invoiceNumber = body.invoiceNumber.trim();
+    if (body.noInvoice === true) {
+      const existing = await prisma.expense.findUnique({
+        where: { id },
+        select: { invoiceNumber: true },
+      });
+      const keepXt = isXtInvoiceNumber(existing?.invoiceNumber ?? null);
+      data.invoiceNumber = keepXt ? existing!.invoiceNumber! : await getNextXtNumber();
+    } else if (body.invoiceNumber !== undefined) {
+      data.invoiceNumber = typeof body.invoiceNumber === "string" && body.invoiceNumber.trim() ? body.invoiceNumber.trim() : null;
+    }
     if (body.supplierId !== undefined) data.supplierId = body.supplierId || null;
     if (typeof body.category === "string") data.category = body.category.trim();
     if (typeof body.amount === "number" && !Number.isNaN(body.amount)) data.amount = body.amount;

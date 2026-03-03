@@ -60,6 +60,7 @@ export default function ExpensesPage() {
   const [form, setForm] = useState({
     date: todayISO(),
     invoiceNumber: "",
+    noInvoice: false,
     supplierId: "",
     category: "",
     amount: "",
@@ -70,7 +71,7 @@ export default function ExpensesPage() {
   const [formImage, setFormImage] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ date: "", invoiceNumber: "", supplierId: "", category: "", amount: "", isCredit: false, paymentMethod: "", notes: "" });
+  const [editForm, setEditForm] = useState({ date: "", invoiceNumber: "", noInvoice: false, supplierId: "", category: "", amount: "", isCredit: false, paymentMethod: "", notes: "" });
   const [editImage, setEditImage] = useState<File | null>(null);
 
   const { from, to } = monthToFromTo(filterMonth);
@@ -109,7 +110,8 @@ export default function ExpensesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: form.date,
-          invoiceNumber: form.invoiceNumber || null,
+          invoiceNumber: form.noInvoice ? "" : (form.invoiceNumber || null),
+          noInvoice: form.noInvoice,
           supplierId: form.supplierId || null,
           category: form.category,
           amount: (form.isCredit ? -1 : 1) * (parseFloat(form.amount) || 0),
@@ -143,6 +145,7 @@ export default function ExpensesPage() {
       setForm({
         date: todayISO(),
         invoiceNumber: extractedInvoiceNumber,
+        noInvoice: form.noInvoice,
         supplierId: "",
         category: form.category,
         amount: extractedAmount,
@@ -172,9 +175,11 @@ export default function ExpensesPage() {
     const pm = PAYMENT_METHODS.includes(exp.paymentMethod as (typeof PAYMENT_METHODS)[number])
       ? exp.paymentMethod
       : "Μετρητά";
+    const isXt = exp.invoiceNumber?.startsWith("XT-") ?? false;
     setEditForm({
       date: exp.date,
-      invoiceNumber: exp.invoiceNumber,
+      invoiceNumber: exp.invoiceNumber ?? "",
+      noInvoice: isXt,
       supplierId: exp.supplierId ?? "",
       category: exp.category,
       amount: String(Math.abs(exp.amount)),
@@ -193,7 +198,8 @@ export default function ExpensesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: editForm.date,
-          invoiceNumber: editForm.invoiceNumber || null,
+          invoiceNumber: editForm.noInvoice ? "" : (editForm.invoiceNumber || null),
+          noInvoice: editForm.noInvoice,
           supplierId: editForm.supplierId || null,
           category: editForm.category,
           amount: (editForm.isCredit ? -1 : 1) * (parseFloat(editForm.amount) || 0),
@@ -257,7 +263,20 @@ export default function ExpensesPage() {
           </div>
           <div>
             <label className="block text-sm text-neutral-600 dark:text-neutral-400">Αριθμός τιμολογίου</label>
-            <input type="text" value={form.invoiceNumber} onChange={(e) => setForm((p) => ({ ...p, invoiceNumber: e.target.value }))} className="input-field mt-1" />
+            <div className="flex gap-2 items-center mt-1">
+              <input
+                type="text"
+                value={form.invoiceNumber}
+                onChange={(e) => setForm((p) => ({ ...p, invoiceNumber: e.target.value }))}
+                className="input-field flex-1"
+                placeholder={form.noInvoice ? "XT-X (αυτόματο)" : ""}
+                disabled={form.noInvoice}
+              />
+              <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                <input type="checkbox" checked={form.noInvoice} onChange={(e) => setForm((p) => ({ ...p, noInvoice: e.target.checked, invoiceNumber: e.target.checked && !p.invoiceNumber.startsWith("XT-") ? "" : p.invoiceNumber }))} className="rounded" />
+                <span className="text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Χωρίς τιμολόγιο</span>
+              </label>
+            </div>
           </div>
           <div>
             <label className="block text-sm text-neutral-600 dark:text-neutral-400">Προμηθευτής</label>
@@ -351,7 +370,13 @@ export default function ExpensesPage() {
                 {editingId === e.id ? (
                   <div className="space-y-2">
                     <input type="date" value={editForm.date} onChange={(ev) => setEditForm((p) => ({ ...p, date: ev.target.value }))} className="input-field text-sm" />
-                    <input type="text" value={editForm.invoiceNumber} onChange={(ev) => setEditForm((p) => ({ ...p, invoiceNumber: ev.target.value }))} placeholder="Αρ. τιμολογίου" className="input-field text-sm" />
+                    <div className="flex gap-2 items-center">
+                      <input type="text" value={editForm.invoiceNumber} onChange={(ev) => setEditForm((p) => ({ ...p, invoiceNumber: ev.target.value }))} placeholder="Αρ. τιμολογίου" className="input-field text-sm flex-1" disabled={editForm.noInvoice} />
+                      <label className="flex items-center gap-1 cursor-pointer shrink-0">
+                        <input type="checkbox" checked={editForm.noInvoice} onChange={(ev) => setEditForm((p) => ({ ...p, noInvoice: ev.target.checked, invoiceNumber: ev.target.checked && !p.invoiceNumber.startsWith("XT-") ? "" : p.invoiceNumber }))} className="rounded" />
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400">Χωρίς τιμολόγιο</span>
+                      </label>
+                    </div>
                     <select value={editForm.supplierId} onChange={(ev) => { const s = suppliers.find((x) => x.id === ev.target.value); setEditForm((p) => ({ ...p, supplierId: ev.target.value, category: s ? s.defaultCategory : p.category })); }} className="input-field text-sm">
                       <option value="">—</option>
                       {suppliers.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
