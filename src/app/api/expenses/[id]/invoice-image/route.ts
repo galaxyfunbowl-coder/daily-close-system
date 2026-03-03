@@ -17,8 +17,26 @@ function getUploadDir(): string {
   return path.join(dataDir, UPLOAD_DIR);
 }
 
-function getFilePath(expenseId: string, ext: string): string {
-  return path.join(getUploadDir(), `${expenseId}${ext}`);
+function sanitizeFilename(s: string, maxLen: number): string {
+  const cleaned = s
+    .replace(/[/\\:*?"<>|]/g, "_")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned.length > maxLen ? cleaned.slice(0, maxLen) : cleaned;
+}
+
+function buildInvoiceFilename(expense: {
+  date: string;
+  supplier?: { name: string } | null;
+  notes: string | null;
+  id: string;
+}): string {
+  const date = expense.date;
+  const supplier = sanitizeFilename(expense.supplier?.name ?? "—", 50);
+  const notes = sanitizeFilename(expense.notes ?? "", 60);
+  const base = `${date} - ${supplier} - ${notes}`.trim();
+  const safe = base || expense.id;
+  return `${safe} - ${expense.id}.jpg`;
 }
 
 export async function GET(
@@ -64,7 +82,10 @@ export async function POST(
   if (auth) return auth;
   const id = (await params).id;
   try {
-    const expense = await prisma.expense.findUnique({ where: { id } });
+    const expense = await prisma.expense.findUnique({
+      where: { id },
+      include: { supplier: true },
+    });
     if (!expense) {
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
@@ -100,10 +121,10 @@ export async function POST(
       .resize(MAX_WIDTH, undefined, { withoutEnlargement: true })
       .jpeg({ quality: JPEG_QUALITY })
       .toBuffer();
-    const ext = ".jpg";
-    const filePath = getFilePath(id, ext);
+    const filename = buildInvoiceFilename(expense);
+    const filePath = path.join(getUploadDir(), filename);
     await writeFile(filePath, compressed);
-    const imagePath = `${UPLOAD_DIR}/${id}${ext}`;
+    const imagePath = `${UPLOAD_DIR}/${filename}`;
     await prisma.expense.update({
       where: { id },
       data: { imagePath },
