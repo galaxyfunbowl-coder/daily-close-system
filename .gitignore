@@ -36,5 +36,5 @@ prisma/migrations/**/migration_lock.toml
 
 # Local data (each clone uses own DB)
 data/app.db
-data/invoice-images/
+data/invoices/
 backups/

@@ -10,13 +10,21 @@ import { writeFile, readFile, unlink, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 
-const UPLOAD_DIR = "invoice-images";
+const UPLOAD_DIR = "invoices";
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
-function getUploadDir(): string {
+/** Returns invoices/YYYY/MM-YYYY from date (e.g. 2026-03-03 -> 2026/03-2026) */
+function getDateSubfolder(date: string): string {
+  const year = date.slice(0, 4);
+  const month = date.slice(5, 7) + "-" + year;
+  return `${year}/${month}`;
+}
+
+function getUploadDirForDate(date: string): string {
   const dataDir = path.join(process.cwd(), "data");
-  return path.join(dataDir, UPLOAD_DIR);
+  const subfolder = getDateSubfolder(date);
+  return path.join(dataDir, UPLOAD_DIR, subfolder);
 }
 
 function sanitizeFilename(s: string, maxLen: number): string {
@@ -116,7 +124,8 @@ export async function POST(
         { status: 400 }
       );
     }
-    const uploadDir = getUploadDir();
+    const subfolder = getDateSubfolder(expense.date);
+    const uploadDir = getUploadDirForDate(expense.date);
     await mkdir(uploadDir, { recursive: true });
     if (expense.imagePath) {
       const oldPath = path.join(process.cwd(), "data", expense.imagePath);
@@ -126,14 +135,14 @@ export async function POST(
     const inputBuffer = Buffer.from(arrayBuffer);
     const isPdf = file.type === "application/pdf";
     const filename = buildInvoiceFilename(expense, ".pdf");
-    const filePath = path.join(getUploadDir(), filename);
+    const filePath = path.join(uploadDir, filename);
     if (isPdf) {
       await writeFile(filePath, inputBuffer);
     } else {
       const pdfBuffer = await convertImageToPdf(inputBuffer, file.type);
       await writeFile(filePath, pdfBuffer);
     }
-    const imagePath = `${UPLOAD_DIR}/${filename}`;
+    const imagePath = `${UPLOAD_DIR}/${subfolder}/${filename}`;
     const extracted =
       isPdf
         ? await extractInvoiceDataFromPdf(inputBuffer)
