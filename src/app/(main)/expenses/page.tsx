@@ -95,20 +95,26 @@ export default function ExpensesPage() {
       }
       const data = await res.json();
       const newId = data.id;
+      let extractedInvoiceNumber = "";
+      let extractedAmount = "";
       if (newId && formImage) {
         const fd = new FormData();
         fd.append("file", formImage);
-        await fetch(`/api/expenses/${newId}/invoice-image`, {
+        const upRes = await fetch(`/api/expenses/${newId}/invoice-image`, {
           method: "POST",
           body: fd,
         });
+        const upData = await upRes.json().catch(() => ({}));
+        extractedInvoiceNumber = upData.extractedInvoiceNumber ?? "";
+        extractedAmount =
+          upData.extractedAmount != null ? String(upData.extractedAmount) : "";
       }
       setForm({
         date: todayISO(),
-        invoiceNumber: "",
+        invoiceNumber: extractedInvoiceNumber,
         supplierId: "",
         category: form.category,
-        amount: "",
+        amount: extractedAmount,
         paymentMethod: form.paymentMethod,
         notes: "",
       });
@@ -170,10 +176,19 @@ export default function ExpensesPage() {
       if (editImage) {
         const fd = new FormData();
         fd.append("file", editImage);
-        await fetch(`/api/expenses/${editingId}/invoice-image`, {
+        const upRes = await fetch(`/api/expenses/${editingId}/invoice-image`, {
           method: "POST",
           body: fd,
         });
+        const upData = await upRes.json().catch(() => ({}));
+        setEditForm((p) => ({
+          ...p,
+          invoiceNumber: upData.extractedInvoiceNumber ?? p.invoiceNumber,
+          amount:
+            upData.extractedAmount != null
+              ? String(upData.extractedAmount)
+              : p.amount,
+        }));
       }
       setEditingId(null);
       setEditImage(null);
