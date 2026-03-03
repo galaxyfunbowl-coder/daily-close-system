@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatAmount } from "@/lib/format-amount";
 
 const MONTH_NAMES = ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"];
 const WEEKDAY = ["Κυρ", "Δευ", "Τρι", "Τετ", "Πεμ", "Παρ", "Σαβ"];
@@ -100,14 +101,14 @@ export default function MonthPage() {
                         <span className="ml-2 text-xs bg-neutral-200 dark:bg-neutral-600 text-neutral-700 dark:text-neutral-200 px-1.5 py-0.5 rounded">Κλειστό</span>
                       )}
                     </div>
-                    <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{d.totalRevenue.toFixed(2)} €</span>
+                    <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{formatAmount(d.totalRevenue)} €</span>
                   </div>
                   {d.notes && (
                     <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2">{d.notes}</p>
                   )}
                   <div className="mt-1 flex gap-3 text-xs text-neutral-500 dark:text-neutral-400">
-                    {d.zPosTotal != null && <span>POS: {d.zPosTotal.toFixed(2)} €</span>}
-                    {d.zCashTotal != null && <span>Μετρητά: {d.zCashTotal.toFixed(2)} €</span>}
+                    {d.zPosTotal != null && <span>POS: {formatAmount(d.zPosTotal)} €</span>}
+                    {d.zCashTotal != null && <span>Μετρητά: {formatAmount(d.zCashTotal)} €</span>}
                     {d.partyCount > 0 && <span>Πάρτυ: {d.partyCount}</span>}
                   </div>
                 </Link>

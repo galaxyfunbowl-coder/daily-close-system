@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { formatAmount } from "@/lib/format-amount";
 
 type DashboardData = {
   month: string;
@@ -134,17 +135,17 @@ export default function DashboardPage() {
           <section className="card-section">
             <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Σύνολα μήνα</h2>
             <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
-              <li><strong>Έσοδα:</strong> {data.totalRevenue.toFixed(2)} €</li>
-              <li><strong>Έξοδα:</strong> {data.totalExpenses.toFixed(2)} €</li>
+              <li><strong>Έσοδα:</strong> {formatAmount(data.totalRevenue)} €</li>
+              <li><strong>Έξοδα:</strong> {formatAmount(data.totalExpenses)} €</li>
               {data.payrollTotal > 0 && (
-                <li className="text-neutral-600 dark:text-neutral-400">— Μισθοδοσία: {data.payrollTotal.toFixed(2)} €</li>
+                <li className="text-neutral-600 dark:text-neutral-400">— Μισθοδοσία: {formatAmount(data.payrollTotal)} €</li>
               )}
               {data.fixedTotal > 0 && (
-                <li className="text-neutral-600 dark:text-neutral-400">— Πάγια έξοδα: {data.fixedTotal.toFixed(2)} €</li>
+                <li className="text-neutral-600 dark:text-neutral-400">— Πάγια έξοδα: {formatAmount(data.fixedTotal)} €</li>
               )}
-              <li><strong>Καθαρά:</strong> {data.netResult.toFixed(2)} €</li>
-              <li><strong>POS σύνολο (από Z):</strong> {data.totalPOS.toFixed(2)} €</li>
-              <li><strong>Μετρητά σύνολο (από Z):</strong> {data.totalCash.toFixed(2)} €</li>
+              <li><strong>Καθαρά:</strong> {formatAmount(data.netResult)} €</li>
+              <li><strong>POS σύνολο (από Z):</strong> {formatAmount(data.totalPOS)} €</li>
+              <li><strong>Μετρητά σύνολο (από Z):</strong> {formatAmount(data.totalCash)} €</li>
             </ul>
           </section>
 
@@ -155,7 +156,7 @@ export default function DashboardPage() {
             ) : (
               <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
                 {Object.entries(data.bowlingBySubLabel).map(([k, v]) => (
-                  <li key={k}>{k}: {v.toFixed(2)} €</li>
+                  <li key={k}>{k}: {formatAmount(v)} €</li>
                 ))}
               </ul>
             )}
@@ -168,7 +169,7 @@ export default function DashboardPage() {
             ) : (
               <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
                 {Object.entries(data.electronicByOperator).map(([name, v]) => (
-                  <li key={name}>{name}: {v.toFixed(2)} €</li>
+                  <li key={name}>{name}: {formatAmount(v)} €</li>
                 ))}
               </ul>
             )}
@@ -177,18 +178,18 @@ export default function DashboardPage() {
           <section className="card-section">
             <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Παιδότοπος / Μπιλιάρδα / Bar / Service / ProShop</h2>
             <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
-              <li>Παιδότοπος: {data.playgroundTotal.toFixed(2)} €</li>
-              <li>Μπιλιάρδα: {data.billiardsTotal.toFixed(2)} €</li>
-              <li>Bar: {data.barTotal.toFixed(2)} €</li>
-              <li>Service: {data.serviceTotal.toFixed(2)} €</li>
-              <li>ProShop: {data.proshopTotal.toFixed(2)} €</li>
+              <li>Παιδότοπος: {formatAmount(data.playgroundTotal)} €</li>
+              <li>Μπιλιάρδα: {formatAmount(data.billiardsTotal)} €</li>
+              <li>Bar: {formatAmount(data.barTotal)} €</li>
+              <li>Service: {formatAmount(data.serviceTotal)} €</li>
+              <li>ProShop: {formatAmount(data.proshopTotal)} €</li>
             </ul>
           </section>
 
           <section className="card-section">
             <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Πάρτυ — Εκδηλώσεις</h2>
             <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
-              <li>Έσοδα πάρτυ: {data.partyRevenue.toFixed(2)} €</li>
+              <li>Έσοδα πάρτυ: {formatAmount(data.partyRevenue)} €</li>
               <li>Αριθμός πάρτυ: {data.partyCount}</li>
             </ul>
           </section>
@@ -200,7 +201,7 @@ export default function DashboardPage() {
             ) : (
               <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
                 {data.staffTotals.map((s) => (
-                  <li key={s.staffId}>{s.staffName}: {s.total.toFixed(2)} €</li>
+                  <li key={s.staffId}>{s.staffName}: {formatAmount(s.total)} €</li>
                 ))}
               </ul>
             )}
@@ -209,10 +210,10 @@ export default function DashboardPage() {
           <section className="card-section">
             <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Σύγκριση YoY (ίδιος μήνας πέρυσι)</h2>
             <ul className="space-y-1 text-sm text-neutral-800 dark:text-neutral-200">
-              <li>Έσοδα πέρυσι: {data.yoy.revenue.toFixed(2)} €</li>
-              <li>Έξοδα πέρυσι: {data.yoy.expenses.toFixed(2)} €</li>
-              <li>Καθαρά πέρυσι: {data.yoy.net.toFixed(2)} €</li>
-              <li>Έσοδα πάρτυ πέρυσι: {data.yoy.partyRevenue.toFixed(2)} €</li>
+              <li>Έσοδα πέρυσι: {formatAmount(data.yoy.revenue)} €</li>
+              <li>Έξοδα πέρυσι: {formatAmount(data.yoy.expenses)} €</li>
+              <li>Καθαρά πέρυσι: {formatAmount(data.yoy.net)} €</li>
+              <li>Έσοδα πάρτυ πέρυσι: {formatAmount(data.yoy.partyRevenue)} €</li>
             </ul>
           </section>
 

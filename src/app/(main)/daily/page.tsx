@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Department, PaymentMethod } from "@prisma/client";
 import { DEPARTMENT_LABELS, BOWLING_SUBLABELS } from "@/lib/constants";
+import { formatAmount } from "@/lib/format-amount";
 
 type Staff = { id: string; name: string };
 type ElectronicOperatorOption = { id: string; name: string };
@@ -343,7 +344,7 @@ export default function DailyPage() {
         <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Z — Σύνολα ημέρας</h2>
         <div className="space-y-3">
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Συνολικά έσοδα (από γραμμές + πάρτυ): <strong>{totalRevenueDay.toFixed(2)} €</strong>
+            Συνολικά έσοδα (από γραμμές + πάρτυ): <strong>{formatAmount(totalRevenueDay)} €</strong>
           </p>
           <div>
             <label className="block text-sm text-neutral-600 dark:text-neutral-400">POS σύνολο (από το Z)</label>
@@ -360,7 +361,7 @@ export default function DailyPage() {
             />
           </div>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Μετρητά (υπολογισμένα): <strong>{calculatedCash.toFixed(2)} €</strong>
+            Μετρητά (υπολογισμένα): <strong>{formatAmount(calculatedCash)} €</strong>
           </p>
         </div>
       </section>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { formatAmount } from "@/lib/format-amount";
 
 type Staff = { id: string; name: string; role: string; active: boolean };
 type Supplier = { id: string; name: string; defaultCategory: string };
@@ -635,7 +636,7 @@ function PayrollSection({ staff }: { staff: Staff[] }) {
             ))}
           </ul>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Σύνολο μισθοδοσίας: <strong>{total.toFixed(2)} €</strong>
+            Σύνολο μισθοδοσίας: <strong>{formatAmount(total)} €</strong>
           </p>
           <button type="button" onClick={save} disabled={saving} className="btn-primary text-sm px-4">
             {saving ? "Αποθήκευση..." : "Αποθήκευση"}
@@ -828,7 +829,7 @@ function FixedExpensesSection() {
                 ) : (
                   <div className="flex justify-between items-center gap-2">
                     <span className="text-neutral-900 dark:text-neutral-100">
-                      {item.name} — {item.amount.toFixed(2)} €
+                      {item.name} — {formatAmount(item.amount)} €
                     </span>
                     <span className="flex gap-2">
                       <button type="button" onClick={() => startEdit(item)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Επεξεργασία</button>
@@ -840,7 +841,7 @@ function FixedExpensesSection() {
             ))}
           </ul>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Σύνολο παγίων: <strong>{total.toFixed(2)} €</strong>
+            Σύνολο παγίων: <strong>{formatAmount(total)} €</strong>
           </p>
         </>
       )}

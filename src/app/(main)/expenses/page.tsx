@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { formatAmount } from "@/lib/format-amount";
 
 type Expense = {
   id: string;
@@ -365,7 +366,7 @@ export default function ExpensesPage() {
             <>
               <span className="ml-2 text-sm font-normal text-neutral-500 dark:text-neutral-400">
                 — σύνολο εξόδων{" "}
-                {(expenses.reduce((s, e) => s + e.amount, 0) + fixedExpenses.reduce((s, e) => s + e.amount, 0)).toFixed(2)} €
+                {formatAmount(expenses.reduce((s, e) => s + e.amount, 0) + fixedExpenses.reduce((s, e) => s + e.amount, 0))} €
               </span>
               <span className="ml-2 text-sm font-normal text-neutral-500 dark:text-neutral-400">
                 — {expenses.length} {expenses.length === 1 ? "τιμολόγιο" : "τιμολόγια"}
@@ -430,7 +431,7 @@ export default function ExpensesPage() {
                   <div className="flex justify-between items-start gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-neutral-900 dark:text-neutral-100">{e.date}</p>
-                      <p className={`text-sm ${e.amount < 0 ? "text-green-600 dark:text-green-400" : "text-neutral-600 dark:text-neutral-400"}`}>{e.supplierName ?? e.category} — {e.amount >= 0 ? "" : "−"}{Math.abs(e.amount).toFixed(2)} €{e.amount < 0 ? " (πιστωτικό)" : ""}</p>
+                      <p className={`text-sm ${e.amount < 0 ? "text-green-600 dark:text-green-400" : "text-neutral-600 dark:text-neutral-400"}`}>{e.supplierName ?? e.category} — {formatAmount(e.amount)} €{e.amount < 0 ? " (πιστωτικό)" : ""}</p>
                       {e.notes && <p className="text-xs text-neutral-500 dark:text-neutral-400">{e.notes}</p>}
                       {e.imagePath && (
                         <a
