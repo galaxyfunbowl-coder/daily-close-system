@@ -7,7 +7,7 @@ import path from "path";
 import sharp from "sharp";
 
 const UPLOAD_DIR = "invoice-images";
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_WIDTH = 1920;
 const JPEG_QUALITY = 85;
@@ -25,18 +25,21 @@ function sanitizeFilename(s: string, maxLen: number): string {
   return cleaned.length > maxLen ? cleaned.slice(0, maxLen) : cleaned;
 }
 
-function buildInvoiceFilename(expense: {
-  date: string;
-  supplier?: { name: string } | null;
-  notes: string | null;
-  id: string;
-}): string {
+function buildInvoiceFilename(
+  expense: {
+    date: string;
+    supplier?: { name: string } | null;
+    notes: string | null;
+    id: string;
+  },
+  ext: string
+): string {
   const date = expense.date;
   const supplier = sanitizeFilename(expense.supplier?.name ?? "—", 50);
   const notes = sanitizeFilename(expense.notes ?? "", 60);
   const base = `${date} - ${supplier} - ${notes}`.trim();
   const safe = base || expense.id;
-  return `${safe} - ${expense.id}.jpg`;
+  return `${safe} - ${expense.id}${ext}`;
 }
 
 export async function GET(
@@ -61,11 +64,13 @@ export async function GET(
     const buf = await readFile(fullPath);
     const ext = path.extname(expense.imagePath).toLowerCase();
     const contentType =
-      ext === ".png"
-        ? "image/png"
-        : ext === ".webp"
-          ? "image/webp"
-          : "image/jpeg";
+      ext === ".pdf"
+        ? "application/pdf"
+        : ext === ".png"
+          ? "image/png"
+          : ext === ".webp"
+            ? "image/webp"
+            : "image/jpeg";
     return new NextResponse(buf, {
       headers: { "Content-Type": contentType },
     });
@@ -99,7 +104,7 @@ export async function POST(
     }
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: "Only JPEG, PNG, WebP allowed" },
+        { error: "Only JPEG, PNG, WebP, PDF allowed" },
         { status: 400 }
       );
     }
@@ -117,13 +122,19 @@ export async function POST(
     }
     const arrayBuffer = await file.arrayBuffer();
     const inputBuffer = Buffer.from(arrayBuffer);
-    const compressed = await sharp(inputBuffer)
-      .resize(MAX_WIDTH, undefined, { withoutEnlargement: true })
-      .jpeg({ quality: JPEG_QUALITY })
-      .toBuffer();
-    const filename = buildInvoiceFilename(expense);
+    const isPdf = file.type === "application/pdf";
+    const ext = isPdf ? ".pdf" : ".jpg";
+    const filename = buildInvoiceFilename(expense, ext);
     const filePath = path.join(getUploadDir(), filename);
-    await writeFile(filePath, compressed);
+    if (isPdf) {
+      await writeFile(filePath, inputBuffer);
+    } else {
+      const compressed = await sharp(inputBuffer)
+        .resize(MAX_WIDTH, undefined, { withoutEnlargement: true })
+        .jpeg({ quality: JPEG_QUALITY })
+        .toBuffer();
+      await writeFile(filePath, compressed);
+    }
     const imagePath = `${UPLOAD_DIR}/${filename}`;
     await prisma.expense.update({
       where: { id },

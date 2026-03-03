@@ -239,10 +239,10 @@ export default function ExpensesPage() {
             <input type="text" value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className="input-field mt-1" />
           </div>
           <div>
-            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Φωτογραφία τιμολογίου (προαιρετικό)</label>
+            <label className="block text-sm text-neutral-600 dark:text-neutral-400">Φωτογραφία/PDF τιμολογίου (προαιρετικό)</label>
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
               capture="environment"
               onChange={(e) => setFormImage(e.target.files?.[0] ?? null)}
               className="mt-1 block w-full text-sm text-neutral-600 dark:text-neutral-400 file:mr-2 file:rounded file:border-0 file:bg-neutral-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-neutral-900 dark:file:bg-neutral-600 dark:file:text-neutral-100"
@@ -290,10 +290,10 @@ export default function ExpensesPage() {
                     </select>
                     <input type="text" value={editForm.notes} onChange={(ev) => setEditForm((p) => ({ ...p, notes: ev.target.value }))} placeholder="Σημειώσεις" className="input-field text-sm" />
                     <div>
-                      <label className="block text-xs text-neutral-500 dark:text-neutral-400">Φωτογραφία τιμολογίου</label>
+                      <label className="block text-xs text-neutral-500 dark:text-neutral-400">Φωτογραφία/PDF τιμολογίου</label>
                       <input
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
                         capture="environment"
                         onChange={(e) => setEditImage(e.target.files?.[0] ?? null)}
                         className="mt-1 block w-full text-sm file:mr-2 file:rounded file:border-0 file:bg-neutral-200 file:px-2 file:py-1 file:text-xs dark:file:bg-neutral-600"
@@ -321,7 +321,7 @@ export default function ExpensesPage() {
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
                         >
-                          📷 Τιμολόγιο
+                          {e.imagePath.toLowerCase().endsWith(".pdf") ? "📄" : "📷"} Τιμολόγιο
                         </a>
                       )}
                     </div>
