@@ -63,13 +63,14 @@ export default function ExpensesPage() {
     supplierId: "",
     category: "",
     amount: "",
+    isCredit: false,
     paymentMethod: "Μετρητά",
     notes: "",
   });
   const [formImage, setFormImage] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ date: "", invoiceNumber: "", supplierId: "", category: "", amount: "", paymentMethod: "", notes: "" });
+  const [editForm, setEditForm] = useState({ date: "", invoiceNumber: "", supplierId: "", category: "", amount: "", isCredit: false, paymentMethod: "", notes: "" });
   const [editImage, setEditImage] = useState<File | null>(null);
 
   const { from, to } = monthToFromTo(filterMonth);
@@ -111,7 +112,7 @@ export default function ExpensesPage() {
           invoiceNumber: form.invoiceNumber || null,
           supplierId: form.supplierId || null,
           category: form.category,
-          amount: parseFloat(form.amount) || 0,
+          amount: (form.isCredit ? -1 : 1) * (parseFloat(form.amount) || 0),
           paymentMethod: form.paymentMethod,
           notes: form.notes || null,
         }),
@@ -125,6 +126,7 @@ export default function ExpensesPage() {
       const newId = data.id;
       let extractedInvoiceNumber = "";
       let extractedAmount = "";
+      let extractedIsCredit = false;
       if (newId && formImage) {
         const fd = new FormData();
         fd.append("file", formImage);
@@ -134,8 +136,9 @@ export default function ExpensesPage() {
         });
         const upData = await upRes.json().catch(() => ({}));
         extractedInvoiceNumber = upData.extractedInvoiceNumber ?? "";
-        extractedAmount =
-          upData.extractedAmount != null ? String(upData.extractedAmount) : "";
+        const amt = upData.extractedAmount;
+        extractedAmount = amt != null ? String(Math.abs(amt)) : "";
+        extractedIsCredit = amt != null && amt < 0;
       }
       setForm({
         date: todayISO(),
@@ -143,6 +146,7 @@ export default function ExpensesPage() {
         supplierId: "",
         category: form.category,
         amount: extractedAmount,
+        isCredit: extractedIsCredit,
         paymentMethod: form.paymentMethod,
         notes: "",
       });
@@ -173,7 +177,8 @@ export default function ExpensesPage() {
       invoiceNumber: exp.invoiceNumber,
       supplierId: exp.supplierId ?? "",
       category: exp.category,
-      amount: String(exp.amount),
+      amount: String(Math.abs(exp.amount)),
+      isCredit: exp.amount < 0,
       paymentMethod: pm,
       notes: exp.notes,
     });
@@ -191,7 +196,7 @@ export default function ExpensesPage() {
           invoiceNumber: editForm.invoiceNumber || null,
           supplierId: editForm.supplierId || null,
           category: editForm.category,
-          amount: parseFloat(editForm.amount) || 0,
+          amount: (editForm.isCredit ? -1 : 1) * (parseFloat(editForm.amount) || 0),
           paymentMethod: editForm.paymentMethod,
           notes: editForm.notes || null,
         }),
@@ -267,7 +272,11 @@ export default function ExpensesPage() {
           </div>
           <div>
             <label className="block text-sm text-neutral-600 dark:text-neutral-400">Ποσό</label>
-            <input type="number" step="0.01" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} placeholder="Ποσό (αρνητικό για πιστωτικό)" className="input-field mt-1" required />
+            <input type="number" step="0.01" min="0" inputMode="decimal" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} placeholder="Ποσό" className="input-field mt-1" required />
+            <label className="mt-2 flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={form.isCredit} onChange={(e) => setForm((p) => ({ ...p, isCredit: e.target.checked }))} className="rounded" />
+              <span className="text-sm text-neutral-600 dark:text-neutral-400">Πιστωτικό</span>
+            </label>
           </div>
           <div>
             <label className="block text-sm text-neutral-600 dark:text-neutral-400">Τρόπος πληρωμής</label>
@@ -348,7 +357,11 @@ export default function ExpensesPage() {
                       {suppliers.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
                     </select>
                     <input type="text" value={editForm.category} onChange={(ev) => setEditForm((p) => ({ ...p, category: ev.target.value }))} placeholder="Κατηγορία" className="input-field text-sm" />
-                    <input type="number" step="0.01" value={editForm.amount} onChange={(ev) => setEditForm((p) => ({ ...p, amount: ev.target.value }))} placeholder="Ποσό (− για πιστωτικό)" className="input-field text-sm" />
+                    <input type="number" step="0.01" min="0" inputMode="decimal" value={editForm.amount} onChange={(ev) => setEditForm((p) => ({ ...p, amount: ev.target.value }))} placeholder="Ποσό" className="input-field text-sm" />
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={editForm.isCredit} onChange={(ev) => setEditForm((p) => ({ ...p, isCredit: ev.target.checked }))} className="rounded" />
+                      <span className="text-sm text-neutral-600 dark:text-neutral-400">Πιστωτικό</span>
+                    </label>
                     <select value={editForm.paymentMethod} onChange={(ev) => setEditForm((p) => ({ ...p, paymentMethod: ev.target.value }))} className="input-field text-sm">
                       {PAYMENT_METHODS.map((pm) => (
                         <option key={pm} value={pm}>{pm}</option>
