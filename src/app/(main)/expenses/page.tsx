@@ -100,7 +100,7 @@ export default function ExpensesPage() {
       if (newId && formImage) {
         const fd = new FormData();
         fd.append("file", formImage);
-        const upRes = await fetch(`/api/expenses/${newId}/invoice-image`, {
+        const upRes = await fetch(`/api/expenses/${newId}/invoice`, {
           method: "POST",
           body: fd,
         });
@@ -176,7 +176,7 @@ export default function ExpensesPage() {
       if (editImage) {
         const fd = new FormData();
         fd.append("file", editImage);
-        const upRes = await fetch(`/api/expenses/${editingId}/invoice-image`, {
+        const upRes = await fetch(`/api/expenses/${editingId}/invoice`, {
           method: "POST",
           body: fd,
         });
@@ -200,7 +200,7 @@ export default function ExpensesPage() {
 
   async function removeInvoiceImage(expenseId: string) {
     if (!confirm("Αφαίρεση φωτογραφίας τιμολογίου;")) return;
-    const res = await fetch(`/api/expenses/${expenseId}/invoice-image`, { method: "DELETE" });
+    const res = await fetch(`/api/expenses/${expenseId}/invoice`, { method: "DELETE" });
     if (res.ok) loadExpenses();
   }
 
@@ -331,7 +331,7 @@ export default function ExpensesPage() {
                       {e.notes && <p className="text-xs text-neutral-500 dark:text-neutral-400">{e.notes}</p>}
                       {e.imagePath && (
                         <a
-                          href={`/api/expenses/${e.id}/invoice-image`}
+                          href={`/api/expenses/${e.id}/invoice`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
