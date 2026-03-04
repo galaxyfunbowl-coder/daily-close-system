@@ -26,7 +26,33 @@ function fallbackUniqueKey(n: NormalizedMyDataExpense): string {
 
 function buildInvoiceNumber(n: NormalizedMyDataExpense): string | null {
   const parts = [n.series, n.aa].filter(Boolean);
-  return parts.length > 0 ? parts.join(" ") : null;
+  if (parts.length > 0) return parts.join(" ");
+  return n.mark ? String(n.mark) : null;
+}
+
+async function getOrCreateSupplier(
+  issuerVat: string | undefined,
+  issuerName: string | undefined
+): Promise<{ id: string; defaultCategory: string } | null> {
+  if (!issuerVat && !issuerName) return null;
+  const vat = issuerVat?.trim();
+  const name = (issuerName?.trim() || (vat ? `Προμηθευτής ${vat}` : "Άγνωστος προμηθευτής")).slice(0, 200);
+  const existing = vat
+    ? await prisma.supplier.findFirst({
+        where: { vatNumber: vat },
+        select: { id: true, defaultCategory: true },
+      })
+    : null;
+  if (existing) return existing;
+  const created = await prisma.supplier.create({
+    data: {
+      name,
+      defaultCategory: "Λοιπά",
+      vatNumber: vat ?? undefined,
+    },
+    select: { id: true, defaultCategory: true },
+  });
+  return created;
 }
 
 export async function GET() {
@@ -124,14 +150,9 @@ export async function POST(request: NextRequest) {
           .join(" ") || "myDATA έξοδο";
       const invoiceNumber = buildInvoiceNumber(n);
 
-      const supplierMatch = n.issuerVat
-        ? await prisma.supplier.findFirst({
-            where: { vatNumber: n.issuerVat },
-            select: { id: true, defaultCategory: true },
-          })
-        : null;
+      const supplierMatch = await getOrCreateSupplier(n.issuerVat, n.issuerName);
       const supplierId = supplierMatch?.id ?? null;
-      const category = supplierMatch?.defaultCategory ?? "Uncategorized";
+      const category = supplierMatch?.defaultCategory ?? "Λοιπά";
 
       const sourceRaw = n.rawSnippet
         ? JSON.stringify(n.rawSnippet)
