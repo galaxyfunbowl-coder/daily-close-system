@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
-import { requestMyExpenses } from "@/lib/mydata/client";
+import {
+  requestMyExpenses,
+  requestDocs,
+  parseIssuerNamesFromRequestDocs,
+  requestReceiverInfo,
+  parseReceiverInfoCompanyName,
+} from "@/lib/mydata/client";
 import { parseMyExpensesResponse, type NormalizedMyDataExpense } from "@/lib/mydata/parser";
 import { getMyDataCredentials } from "@/lib/mydata/credentials";
 
@@ -30,13 +36,33 @@ function buildInvoiceNumber(n: NormalizedMyDataExpense): string | null {
   return n.mark ? String(n.mark) : null;
 }
 
+const receiverInfoCache = new Map<string, string>();
+
 async function getOrCreateSupplier(
   issuerVat: string | undefined,
-  issuerName: string | undefined
+  issuerName: string | undefined,
+  creds: { userId: string; subscriptionKey: string }
 ): Promise<{ id: string; defaultCategory: string } | null> {
   if (!issuerVat && !issuerName) return null;
   const vat = issuerVat?.trim();
-  const name = (issuerName?.trim() || (vat ? `Προμηθευτής ${vat}` : "Άγνωστος προμηθευτής")).slice(0, 200);
+  let name = issuerName?.trim();
+  if (!name && vat) {
+    const cached = receiverInfoCache.get(vat);
+    if (cached) name = cached;
+    else {
+      try {
+        const resp = await requestReceiverInfo(vat, creds);
+        const fetched = parseReceiverInfoCompanyName(resp);
+        if (fetched) {
+          name = fetched;
+          receiverInfoCache.set(vat, fetched);
+        }
+      } catch {
+        // ignore - use fallback name
+      }
+    }
+  }
+  name = (name || (vat ? `Προμηθευτής ${vat}` : "Άγνωστος προμηθευτής")).slice(0, 200);
   const existing = vat
     ? await prisma.supplier.findFirst({
         where: { vatNumber: vat },
@@ -134,6 +160,17 @@ export async function POST(request: NextRequest) {
     const normalized = parseMyExpensesResponse(xmlText);
     fetched = normalized.length;
 
+    // RequestDocs returns full documents with issuer.name; pre-fill cache for supplier names
+    try {
+      const docsText = await requestDocs(dateFrom, dateTo, creds);
+      const issuerNames = parseIssuerNamesFromRequestDocs(docsText);
+      for (const [vat, name] of issuerNames) {
+        if (vat && name) receiverInfoCache.set(vat, name);
+      }
+    } catch {
+      // Continue without RequestDocs names; getOrCreateSupplier will use requestReceiverInfo fallback
+    }
+
     for (const n of normalized) {
       const pk = n.mark || fallbackUniqueKey(n);
       if (!pk) {
@@ -150,7 +187,7 @@ export async function POST(request: NextRequest) {
           .join(" ") || "myDATA έξοδο";
       const invoiceNumber = buildInvoiceNumber(n);
 
-      const supplierMatch = await getOrCreateSupplier(n.issuerVat, n.issuerName);
+      const supplierMatch = await getOrCreateSupplier(n.issuerVat, n.issuerName, creds);
       const supplierId = supplierMatch?.id ?? null;
       const category = supplierMatch?.defaultCategory ?? "Λοιπά";
 

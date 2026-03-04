@@ -75,7 +75,12 @@ function collectExpensesFromNode(
       mark,
       uid: toStr(obj.uid ?? obj.UID),
       issuerVat: toStr(obj.issuerVat ?? obj.issuervat ?? obj.vat_number ?? obj.afm ?? obj.counterVatNumber ?? obj.countervatnumber),
-      issuerName: toStr(obj.issuerName ?? obj.issuername ?? obj.company_name),
+      issuerName: toStr(
+        obj.issuerName ?? obj.issuername ?? obj.company_name ??
+        obj.counterPartyName ?? obj.counterpartyName ?? obj.counterPartName ??
+        obj.counterCompanyName ?? obj.countercompanyname ?? obj.companyName ??
+        obj.partyName ?? obj.counterName ?? obj.issuer
+      ),
       receiverVat: toStr(obj.receiverVat ?? obj.receivervat),
       issueDate: toDateStr(obj.issueDate ?? obj.issuedate ?? obj.date),
       invoiceType: toStr(obj.invoiceType ?? obj.invoicetype ?? obj.invoice_type),
