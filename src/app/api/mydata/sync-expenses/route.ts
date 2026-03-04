@@ -161,17 +161,21 @@ export async function POST(request: NextRequest) {
 
     const lastMark = await getLastMark();
 
-    // Pre-check which marks already exist in DB (for all returned records)
+    // Pre-check which marks are fully imported (MyDataExpense + linked Expense both exist)
     const allMarksFromApi = allNormalized.map((n) => n.mark).filter(Boolean);
     const existingInDb = await prisma.myDataExpense.findMany({
       where: { mark: { in: allMarksFromApi } },
-      select: { mark: true },
+      select: { mark: true, expense: { select: { id: true } } },
     });
-    const marksInDb = new Set(existingInDb.map((e) => e.mark));
+    // A mark is "complete" only if MyDataExpense exists AND has a linked Expense
+    const completeMarks = new Set(
+      existingInDb.filter((e) => e.expense !== null).map((e) => e.mark)
+    );
 
-    // Process if: mark > lastMyDataMark (new) OR mark not in DB (deleted, re-import)
+    // Process if: mark > lastMyDataMark (new)
+    //             OR not fully imported (MyDataExpense missing, or Expense was deleted)
     const normalized = allNormalized.filter(
-      (n) => !lastMark || n.mark > lastMark || !marksInDb.has(n.mark)
+      (n) => !lastMark || n.mark > lastMark || !completeMarks.has(n.mark)
     );
     fetched = normalized.length;
 
@@ -179,6 +183,7 @@ export async function POST(request: NextRequest) {
       const res: Record<string, unknown> = {
         fetched: 0, inserted: 0, updated: 0, linkedExpenses: 0, skipped: 0, errors: [],
         totalFromApi: allNormalized.length,
+        alreadyComplete: completeMarks.size,
         lastMark,
       };
       if (debug && rawResponse) res.rawResponsePreview = rawResponse.slice(0, 1000);

@@ -307,10 +307,15 @@ export default function ExpensesPage() {
         return;
       }
       loadExpenses();
-      let msg = `myDATA (${from} έως ${to}):\n${data.fetched} τιμολόγια — ${data.inserted} νέα, ${data.updated} ενημερωμένα${data.errors?.length ? `\nΣφάλματα: ${data.errors.length}` : ""}`;
-      if (data.fetched === 0 && data.rawResponsePreview) {
+      let msg: string;
+      if (data.fetched === 0 && data.totalFromApi > 0) {
+        msg = `myDATA (${from} έως ${to}):\nΌλα ενημερωμένα — ${data.alreadyComplete ?? data.totalFromApi} τιμολόγια ήδη εισηγμένα.`;
+      } else {
+        msg = `myDATA (${from} έως ${to}):\n${data.fetched} τιμολόγια — ${data.inserted} νέα, ${data.updated} ενημερωμένα${data.errors?.length ? `\nΣφάλματα: ${data.errors.length}` : ""}`;
+      }
+      if (data.fetched === 0 && data.totalFromApi === 0 && data.rawResponsePreview) {
         console.log("myDATA raw response:", data.rawResponsePreview);
-        msg += "\n\n(Δείτε console για raw API response)";
+        msg += "\n(raw response στο console)";
       }
       alert(msg);
     } catch (e) {
