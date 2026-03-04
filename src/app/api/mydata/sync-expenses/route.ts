@@ -52,12 +52,14 @@ export async function POST(request: NextRequest) {
   let dateFrom: string;
   let dateTo: string;
   let dryRun = false;
+  let debug = false;
 
   try {
     const body = (await request.json()) as {
       dateFrom?: string;
       dateTo?: string;
       dryRun?: boolean;
+      debug?: boolean;
     };
     dateFrom =
       typeof body.dateFrom === "string" && DATE_REGEX.test(body.dateFrom)
@@ -68,6 +70,7 @@ export async function POST(request: NextRequest) {
         ? body.dateTo
         : todayISO();
     dryRun = body.dryRun === true;
+    debug = body.debug === true;
   } catch {
     dateFrom = todayISO();
     dateTo = todayISO();
@@ -75,6 +78,7 @@ export async function POST(request: NextRequest) {
 
   const errors: { mark?: string; message: string }[] = [];
   let fetched = 0;
+  let rawResponse = "";
   let inserted = 0;
   let updated = 0;
   let linkedExpenses = 0;
@@ -100,6 +104,7 @@ export async function POST(request: NextRequest) {
       );
     }
     const xmlText = await requestMyExpenses(dateFrom, dateTo, creds);
+    rawResponse = xmlText;
     const normalized = parseMyExpensesResponse(xmlText);
     fetched = normalized.length;
 
@@ -239,12 +244,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({
+  const res: Record<string, unknown> = {
     fetched,
     inserted,
     updated,
     linkedExpenses,
     skipped,
     errors,
-  });
+  };
+  if (debug && fetched === 0 && rawResponse) {
+    res.rawResponsePreview = rawResponse.slice(0, 1000);
+  }
+  return NextResponse.json(res);
 }

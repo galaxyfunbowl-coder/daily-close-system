@@ -61,12 +61,12 @@ function collectExpensesFromNode(
 
   const obj = node as Record<string, unknown>;
 
-  const mark = toStr(obj.mark ?? obj.MARK ?? obj.Mark);
+  const mark = toStr(obj.mark ?? obj.MARK ?? obj.Mark ?? obj.minMark ?? obj.maxMark);
   if (mark) {
-    const netAmount = toNum(obj.netAmount ?? obj.netamount ?? obj.net_value);
+    const netAmount = toNum(obj.netAmount ?? obj.netamount ?? obj.net_value ?? obj.netValue ?? obj.netvalue);
     const vatAmount = toNum(obj.vatAmount ?? obj.vatamount ?? obj.vat_value);
     const totalAmount = toNum(
-      obj.totalAmount ?? obj.totalamount ?? obj.gross_value ?? obj.grossValue
+      obj.totalAmount ?? obj.totalamount ?? obj.gross_value ?? obj.grossValue ?? obj.grossvalue
     );
     const amount =
       totalAmount ?? (netAmount != null && vatAmount != null ? netAmount + vatAmount : undefined);
@@ -74,7 +74,7 @@ function collectExpensesFromNode(
     acc.push({
       mark,
       uid: toStr(obj.uid ?? obj.UID),
-      issuerVat: toStr(obj.issuerVat ?? obj.issuervat ?? obj.vat_number ?? obj.afm),
+      issuerVat: toStr(obj.issuerVat ?? obj.issuervat ?? obj.vat_number ?? obj.afm ?? obj.counterVatNumber ?? obj.countervatnumber),
       issuerName: toStr(obj.issuerName ?? obj.issuername ?? obj.company_name),
       receiverVat: toStr(obj.receiverVat ?? obj.receivervat),
       issueDate: toDateStr(obj.issueDate ?? obj.issuedate ?? obj.date),
@@ -125,6 +125,10 @@ function findExpenseArrays(root: Record<string, unknown>): unknown[] {
     "Docs",
     "expensesClassification",
     "expensesclassification",
+    "bookInfo",
+    "bookInfos",
+    "BookInfo",
+    "BookInfos",
   ];
 
   for (const k of keys) {
@@ -136,7 +140,7 @@ function findExpenseArrays(root: Record<string, unknown>): unknown[] {
   const walk = (o: unknown): void => {
     if (!o || typeof o !== "object") return;
     const x = o as Record<string, unknown>;
-    if (x.mark || x.MARK || x.Mark) {
+    if (x.mark || x.MARK || x.Mark || x.minMark || x.maxMark) {
       candidates.push(o);
       return;
     }
@@ -154,10 +158,24 @@ function findExpenseArrays(root: Record<string, unknown>): unknown[] {
 }
 
 export function parseMyExpensesResponse(xmlText: string): NormalizedMyDataExpense[] {
-  const parsed = parser.parse(xmlText);
-  if (!parsed || typeof parsed !== "object") return [];
-
-  const root = parsed as Record<string, unknown>;
+  const trimmed = xmlText.trim();
+  let root: Record<string, unknown>;
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const json = JSON.parse(trimmed) as unknown;
+      root = typeof json === "object" && json !== null && !Array.isArray(json)
+        ? (json as Record<string, unknown>)
+        : Array.isArray(json)
+          ? { items: json }
+          : {};
+    } catch {
+      return [];
+    }
+  } else {
+    const parsed = parser.parse(xmlText);
+    if (!parsed || typeof parsed !== "object") return [];
+    root = parsed as Record<string, unknown>;
+  }
   const acc: NormalizedMyDataExpense[] = [];
 
   const arrays = findExpenseArrays(root);

@@ -219,14 +219,18 @@ export default function DailyPage() {
       const res = await fetch("/api/mydata/sync-expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dateFrom: date, dateTo: date }),
+        body: JSON.stringify({ dateFrom: date, dateTo: date, debug: true }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error ?? "Σφάλμα sync myDATA");
         return;
       }
-      const msg = `myDATA: ${data.fetched} τιμολόγια — ${data.inserted} νέα, ${data.updated} ενημερωμένα`;
+      let msg = `myDATA: ${data.fetched} τιμολόγια — ${data.inserted} νέα, ${data.updated} ενημερωμένα`;
+      if (data.fetched === 0 && data.rawResponsePreview) {
+        console.log("myDATA raw response:", data.rawResponsePreview);
+        msg += "\n\n(Δείτε console για raw API response)";
+      }
       alert(msg);
       if (data.fetched > 0 || data.inserted > 0 || data.updated > 0) {
         router.push("/expenses");

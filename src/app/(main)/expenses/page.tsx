@@ -295,7 +295,7 @@ export default function ExpensesPage() {
       const res = await fetch("/api/mydata/sync-expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dateFrom: from, dateTo: to }),
+        body: JSON.stringify({ dateFrom: from, dateTo: to, debug: true }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -305,7 +305,11 @@ export default function ExpensesPage() {
         return;
       }
       loadExpenses();
-      const msg = `myDATA (${from} έως ${to}):\n${data.fetched} τιμολόγια — ${data.inserted} νέα, ${data.updated} ενημερωμένα${data.errors?.length ? `\nΣφάλματα: ${data.errors.length}` : ""}`;
+      let msg = `myDATA (${from} έως ${to}):\n${data.fetched} τιμολόγια — ${data.inserted} νέα, ${data.updated} ενημερωμένα${data.errors?.length ? `\nΣφάλματα: ${data.errors.length}` : ""}`;
+      if (data.fetched === 0 && data.rawResponsePreview) {
+        console.log("myDATA raw response:", data.rawResponsePreview);
+        msg += "\n\n(Δείτε console για raw API response)";
+      }
       alert(msg);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
