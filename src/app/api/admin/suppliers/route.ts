@@ -16,11 +16,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const defaultCategory = typeof body.defaultCategory === "string" ? body.defaultCategory.trim() : "";
+    const vatNumber = typeof body.vatNumber === "string" && body.vatNumber.trim() ? body.vatNumber.trim() : undefined;
     if (!name) {
       return NextResponse.json({ error: "Name required" }, { status: 400 });
     }
+    if (vatNumber) {
+      const existing = await prisma.supplier.findUnique({ where: { vatNumber } });
+      if (existing) {
+        return NextResponse.json({ error: `ΑΦΜ ${vatNumber} ήδη υπάρχει (${existing.name})` }, { status: 409 });
+      }
+    }
     const supplier = await prisma.supplier.create({
-      data: { name, defaultCategory: defaultCategory || "General" },
+      data: { name, defaultCategory: defaultCategory || "Λοιπά", vatNumber },
     });
     return NextResponse.json({ id: supplier.id, ok: true });
   } catch {

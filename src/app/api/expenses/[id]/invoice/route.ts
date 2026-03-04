@@ -11,9 +11,9 @@ import { writeFile, readFile, unlink, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 
-const UPLOAD_DIR = "invoices";
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+const UPLOAD_DIR = "uploads";
+const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const MAX_SIZE = 15 * 1024 * 1024;
 
 /** Returns invoices/YYYY/MM-YYYY from date (e.g. 2026-03-03 -> 2026/03-2026) */
 function getDateSubfolder(date: string): string {
@@ -115,13 +115,13 @@ export async function POST(
     }
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: "Only JPEG, PNG, WebP, PDF allowed" },
+        { error: "Μόνο PDF, JPEG, PNG επιτρέπονται" },
         { status: 400 }
       );
     }
     if (file.size > MAX_SIZE) {
       return NextResponse.json(
-        { error: "Max size 10 MB" },
+        { error: "Μέγιστο μέγεθος 15 MB" },
         { status: 400 }
       );
     }

@@ -41,9 +41,12 @@ function getYearMonth(ym: string): { year: number; monthNum: number } {
   return { year: y, monthNum: m };
 }
 
+type Alert = { type: "warning" | "info"; message: string };
+
 export default function DashboardPage() {
   const [month, setMonth] = useState(currentMonth);
   const [data, setData] = useState<DashboardData | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [backupLoading, setBackupLoading] = useState(false);
 
@@ -55,15 +58,17 @@ export default function DashboardPage() {
   const load = useCallback(async (m: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/dashboard?month=${m}`);
-      if (res.ok) {
-        const d = await res.json();
-        setData(d);
-      } else {
-        setData(null);
-      }
+      const [res, alertsRes] = await Promise.all([
+        fetch(`/api/dashboard?month=${m}`),
+        fetch("/api/dashboard/alerts"),
+      ]);
+      if (res.ok) setData(await res.json());
+      else setData(null);
+      if (alertsRes.ok) setAlerts(await alertsRes.json());
+      else setAlerts([]);
     } catch {
       setData(null);
+      setAlerts([]);
     } finally {
       setLoading(false);
     }
@@ -125,6 +130,20 @@ export default function DashboardPage() {
           {backupLoading ? "..." : "Backup βάσης"}
         </button>
       </div>
+
+      {alerts.length > 0 && (
+        <section className="space-y-2">
+          {alerts.map((a, i) => (
+            <div key={i} className={`rounded-lg px-4 py-3 text-sm ${
+              a.type === "warning"
+                ? "bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800"
+                : "bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-800"
+            }`}>
+              {a.type === "warning" ? "⚠ " : "ℹ "}{a.message}
+            </div>
+          ))}
+        </section>
+      )}
 
       {loading ? (
         <p className="text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>

@@ -7,49 +7,34 @@ import {
 } from "@/lib/mydata/client";
 import { parseMyExpensesResponse, type NormalizedMyDataExpense } from "@/lib/mydata/parser";
 import { getMyDataCredentials } from "@/lib/mydata/credentials";
+import { normalizeGreekVat, todayISO, buildInvoiceNumber, DATE_REGEX } from "@/lib/mydata/utils";
 
 export const maxDuration = 60;
 
-const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+async function getLastMark(): Promise<string | null> {
+  const settings = await prisma.companySettings.findUnique({
+    where: { id: "main" },
+    select: { lastMyDataMark: true },
+  });
+  return settings?.lastMyDataMark ?? null;
+}
 
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+async function saveLastMark(mark: string): Promise<void> {
+  await prisma.companySettings.upsert({
+    where: { id: "main" },
+    update: { lastMyDataMark: mark },
+    create: { id: "main", lastMyDataMark: mark },
+  });
 }
 
 function fallbackUniqueKey(n: NormalizedMyDataExpense): string {
-  const parts = [
+  return [
     n.issuerVat ?? "",
     n.issueDate ?? "",
     String(n.totalAmount ?? 0),
     n.invoiceType ?? "",
     n.aa ?? "",
-  ];
-  return parts.join("|");
-}
-
-function buildInvoiceNumber(n: NormalizedMyDataExpense): string | null {
-  const parts = [n.series, n.aa].filter(Boolean);
-  if (parts.length > 0) return parts.join(" ");
-  return n.mark ? String(n.mark) : null;
-}
-
-const receiverInfoCache = new Map<string, string>();
-
-function getCachedName(vat: string): string | undefined {
-  const v = vat.replace(/\D/g, "");
-  if (!v) return undefined;
-  return (
-    receiverInfoCache.get(v) ??
-    receiverInfoCache.get(v.padStart(9, "0")) ??
-    receiverInfoCache.get(v.replace(/^0+/, ""))
-  );
-}
-
-/** Greek VAT: 9 digits. Pad 8-digit to 9 (e.g. 94005751 → 094005751). */
-function normalizeGreekVat(vat: string): string {
-  const digits = vat.replace(/\D/g, "");
-  if (digits.length === 8) return `0${digits}`;
-  return digits.length === 9 ? digits : vat;
+  ].join("|");
 }
 
 function isFallbackName(name: string, vat: string): boolean {
@@ -57,44 +42,43 @@ function isFallbackName(name: string, vat: string): boolean {
   return name === `Προμηθευτής ${vat}` || name === `Προμηθευτής ${vat9}`;
 }
 
-async function getOrCreateSupplier(
+async function findOrCreateSupplier(
   issuerVat: string | undefined,
   issuerName: string | undefined,
-  creds: { userId: string; subscriptionKey: string }
+  nameCache: Map<string, string>
 ): Promise<{ id: string; defaultCategory: string } | null> {
   if (!issuerVat && !issuerName) return null;
   const vatRaw = issuerVat?.trim() ?? "";
   const vat = normalizeGreekVat(vatRaw);
-  let name = issuerName?.trim();
+
+  let name = issuerName?.trim() || undefined;
   if (!name && vat) {
-    name = getCachedName(vat);
+    const digits = vat.replace(/\D/g, "");
+    name = nameCache.get(digits)
+      ?? nameCache.get(digits.padStart(9, "0"))
+      ?? nameCache.get(digits.replace(/^0+/, ""));
   }
   const fallbackName = vat ? `Προμηθευτής ${vat}` : "Άγνωστος προμηθευτής";
   name = (name || fallbackName).slice(0, 200);
-  const searchVats = Array.from(new Set([vat, vatRaw, vatRaw.replace(/\D/g, "")].filter(Boolean)));
-  const existing = searchVats.length > 0
-    ? await prisma.supplier.findFirst({
-        where: {
-          OR: searchVats.map((v) => ({ vatNumber: v })),
-        },
-        select: { id: true, defaultCategory: true, name: true },
-      })
-    : null;
-  if (existing) {
-    if (name !== fallbackName && isFallbackName(existing.name, vat)) {
-      await prisma.supplier.update({
-        where: { id: existing.id },
-        data: { name },
-      });
+
+  if (vat) {
+    const existing = await prisma.supplier.findUnique({
+      where: { vatNumber: vat },
+      select: { id: true, defaultCategory: true, name: true },
+    });
+    if (existing) {
+      if (name !== fallbackName && isFallbackName(existing.name, vat)) {
+        await prisma.supplier.update({
+          where: { id: existing.id },
+          data: { name },
+        });
+      }
+      return { id: existing.id, defaultCategory: existing.defaultCategory };
     }
-    return { id: existing.id, defaultCategory: existing.defaultCategory };
   }
+
   const created = await prisma.supplier.create({
-    data: {
-      name,
-      defaultCategory: "Λοιπά",
-      vatNumber: vat || undefined,
-    },
+    data: { name, defaultCategory: "Λοιπά", vatNumber: vat || undefined },
     select: { id: true, defaultCategory: true },
   });
   return created;
@@ -147,6 +131,13 @@ export async function POST(request: NextRequest) {
     dateTo = todayISO();
   }
 
+  if (dryRun) {
+    return NextResponse.json({
+      fetched: 0, inserted: 0, updated: 0, linkedExpenses: 0, skipped: 0, errors: [],
+      message: "Dry run – AADE not called",
+    });
+  }
+
   const errors: { mark?: string; message: string }[] = [];
   let fetched = 0;
   let rawResponse = "";
@@ -156,17 +147,6 @@ export async function POST(request: NextRequest) {
   let skipped = 0;
 
   try {
-    if (dryRun) {
-      return NextResponse.json({
-        fetched: 0,
-        inserted: 0,
-        updated: 0,
-        linkedExpenses: 0,
-        skipped: 0,
-        errors: [],
-        message: "Dry run – AADE not called",
-      });
-    }
     const creds = await getMyDataCredentials();
     if (!creds) {
       return NextResponse.json(
@@ -174,28 +154,52 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
     const xmlText = await requestMyExpenses(dateFrom, dateTo, creds);
     rawResponse = xmlText;
-    const normalized = parseMyExpensesResponse(xmlText);
+    const allNormalized = parseMyExpensesResponse(xmlText);
+
+    const lastMark = await getLastMark();
+    const normalized = lastMark
+      ? allNormalized.filter((n) => n.mark > lastMark)
+      : allNormalized;
     fetched = normalized.length;
 
-    // RequestDocs returns full documents with issuer.name; pre-fill cache for supplier names.
-    // On cryptoKey error for date range, retries per-day for partial results.
+    if (fetched === 0) {
+      const res: Record<string, unknown> = {
+        fetched: 0, inserted: 0, updated: 0, linkedExpenses: 0, skipped: 0, errors: [],
+        totalFromApi: allNormalized.length,
+        lastMark,
+      };
+      if (debug && rawResponse) res.rawResponsePreview = rawResponse.slice(0, 1000);
+      return NextResponse.json(res);
+    }
+
+    const nameCache = new Map<string, string>();
     try {
       const issuerNames = await requestDocsIssuerNames(dateFrom, dateTo, creds, 31);
       for (const [vat, name] of issuerNames) {
         if (vat && name) {
           const vatNorm = vat.replace(/\D/g, "");
           if (vatNorm) {
-            receiverInfoCache.set(vatNorm, name);
-            if (vatNorm.length === 8) receiverInfoCache.set(`0${vatNorm}`, name);
-            if (vatNorm.length === 9 && vatNorm.startsWith("0")) receiverInfoCache.set(vatNorm.replace(/^0+/, ""), name);
+            nameCache.set(vatNorm, name);
+            if (vatNorm.length === 8) nameCache.set(`0${vatNorm}`, name);
+            if (vatNorm.length === 9 && vatNorm.startsWith("0")) nameCache.set(vatNorm.replace(/^0+/, ""), name);
           }
         }
       }
     } catch {
-      // Continue without RequestDocs names; getOrCreateSupplier will use fallback name
+      // RequestDocs not critical
     }
+
+    const allMarks = normalized.map((n) => n.mark).filter(Boolean);
+    const existingMyData = await prisma.myDataExpense.findMany({
+      where: { mark: { in: allMarks } },
+      include: { expense: true },
+    });
+    const existingByMark = new Map(existingMyData.map((e) => [e.mark, e]));
+
+    let highestMark = lastMark ?? "";
 
     for (const n of normalized) {
       const pk = n.mark || fallbackUniqueKey(n);
@@ -205,22 +209,19 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      if (n.mark && n.mark > highestMark) highestMark = n.mark;
+
       const issueDate = n.issueDate ?? todayISO();
       const totalAmount = n.totalAmount ?? 0;
       const description =
-        [n.issuerName, n.issuerVat, n.aa, n.series]
-          .filter(Boolean)
-          .join(" ") || "myDATA έξοδο";
-      const invoiceNumber = buildInvoiceNumber(n);
+        [n.issuerName, n.issuerVat, n.aa, n.series].filter(Boolean).join(" ") || "myDATA έξοδο";
+      const invoiceNumber = buildInvoiceNumber(n.series, n.aa) ?? (n.mark ? String(n.mark) : null);
 
-      const supplierMatch = await getOrCreateSupplier(n.issuerVat, n.issuerName, creds);
+      const supplierMatch = await findOrCreateSupplier(n.issuerVat, n.issuerName, nameCache);
       const supplierId = supplierMatch?.id ?? null;
       const category = supplierMatch?.defaultCategory ?? "Λοιπά";
 
-      const sourceRaw = n.rawSnippet
-        ? JSON.stringify(n.rawSnippet)
-        : null;
-
+      const sourceRaw = n.rawSnippet ? JSON.stringify(n.rawSnippet) : null;
       const myDataData = {
         mark: n.mark,
         uid: n.uid ?? undefined,
@@ -240,43 +241,58 @@ export async function POST(request: NextRequest) {
         sourceRaw: sourceRaw ?? undefined,
       };
 
-      const existing = await prisma.myDataExpense.findUnique({
-        where: { mark: n.mark },
-        include: { expense: true },
-      });
+      const existing = existingByMark.get(n.mark);
 
-      let myDataExpense;
       if (existing) {
-        myDataExpense = await prisma.myDataExpense.update({
-          where: { mark: n.mark },
-          data: myDataData,
-        });
-        updated++;
+        await prisma.$transaction(async (tx) => {
+          const myDataExpense = await tx.myDataExpense.update({
+            where: { mark: n.mark },
+            data: myDataData,
+          });
+          updated++;
 
-        if (existing.expense) {
-          linkedExpenses++;
-          if (
-            existing.expense.source === "MYDATA" &&
-            !existing.expense.userEdited
-          ) {
-            await prisma.expense.update({
-              where: { id: existing.expense.id },
+          if (existing.expense) {
+            linkedExpenses++;
+            if (existing.expense.source === "MYDATA" && !existing.expense.userEdited) {
+              await tx.expense.update({
+                where: { id: existing.expense.id },
+                data: {
+                  date: issueDate,
+                  amount: totalAmount,
+                  category: existing.expense.category || category,
+                  notes: description,
+                  supplierId: supplierId ?? existing.expense.supplierId,
+                  invoiceNumber: invoiceNumber ?? existing.expense.invoiceNumber,
+                },
+              });
+            }
+          } else {
+            await tx.expense.create({
               data: {
                 date: issueDate,
+                invoiceNumber,
+                supplierId,
+                category,
                 amount: totalAmount,
-                category: existing.expense.category || category,
+                paymentMethod: "Τραπεζική μεταφορά",
                 notes: description,
-                supplierId: supplierId ?? existing.expense.supplierId,
-                invoiceNumber: invoiceNumber ?? existing.expense.invoiceNumber,
+                source: "MYDATA",
+                userEdited: false,
+                myDataExpenseId: myDataExpense.id,
               },
             });
+            linkedExpenses++;
           }
-        } else {
-          await prisma.expense.create({
+        });
+      } else {
+        await prisma.$transaction(async (tx) => {
+          const myDataExpense = await tx.myDataExpense.create({ data: myDataData });
+          inserted++;
+          await tx.expense.create({
             data: {
               date: issueDate,
-              invoiceNumber: invoiceNumber,
-              supplierId: supplierId,
+              invoiceNumber,
+              supplierId,
               category,
               amount: totalAmount,
               paymentMethod: "Τραπεζική μεταφορά",
@@ -287,54 +303,24 @@ export async function POST(request: NextRequest) {
             },
           });
           linkedExpenses++;
-        }
-      } else {
-        myDataExpense = await prisma.myDataExpense.create({
-          data: myDataData,
         });
-        inserted++;
-
-        const expense = await prisma.expense.create({
-          data: {
-            date: issueDate,
-            invoiceNumber: invoiceNumber,
-            supplierId: supplierId,
-            category,
-            amount: totalAmount,
-            paymentMethod: "Τραπεζική μεταφορά",
-            notes: description,
-            source: "MYDATA",
-            userEdited: false,
-            myDataExpenseId: myDataExpense.id,
-          },
-        });
-        linkedExpenses++;
       }
+    }
+
+    if (highestMark) {
+      await saveLastMark(highestMark);
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Sync failed";
     console.error("[mydata sync]", msg, e);
     return NextResponse.json(
-      {
-        error: msg,
-        fetched,
-        inserted,
-        updated,
-        linkedExpenses,
-        skipped,
-        errors,
-      },
+      { error: msg, fetched, inserted, updated, linkedExpenses, skipped, errors },
       { status: 500 }
     );
   }
 
   const res: Record<string, unknown> = {
-    fetched,
-    inserted,
-    updated,
-    linkedExpenses,
-    skipped,
-    errors,
+    fetched, inserted, updated, linkedExpenses, skipped, errors,
   };
   if (debug && fetched === 0 && rawResponse) {
     res.rawResponsePreview = rawResponse.slice(0, 1000);

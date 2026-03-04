@@ -8,6 +8,7 @@ import { LogoutButton } from "@/components/LogoutButton";
 const NAV_LINKS = [
   { href: "/daily", label: "Daily" },
   { href: "/expenses", label: "Expenses" },
+  { href: "/suppliers", label: "Suppliers" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/month", label: "Μήνας" },
   { href: "/search", label: "Αναζήτηση" },

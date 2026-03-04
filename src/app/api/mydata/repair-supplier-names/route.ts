@@ -3,13 +3,9 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
 import { requestDocsIssuerNames } from "@/lib/mydata/client";
 import { getMyDataCredentials } from "@/lib/mydata/credentials";
+import { normalizeGreekVat } from "@/lib/mydata/utils";
 
 const FALLBACK_PATTERN = /^Προμηθευτής\s+(\d{8,9})$/;
-
-function normalizeGreekVat(vat: string): string {
-  const digits = vat.replace(/\D/g, "");
-  return digits.length === 8 ? `0${digits}` : digits.length === 9 ? digits : vat;
-}
 
 function monthsAgo(months: number): string {
   const d = new Date();
@@ -30,10 +26,7 @@ export async function POST() {
 
   const creds = await getMyDataCredentials();
   if (!creds) {
-    return NextResponse.json(
-      { error: "myDATA credentials missing." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "myDATA credentials missing." }, { status: 400 });
   }
 
   const issuerNames = new Map<string, string>();
@@ -77,58 +70,47 @@ export async function POST() {
     const vat = s.vatNumber ?? "";
     const vatNorm = vat.replace(/\D/g, "").replace(/^0+/, "") || vat;
     const vatPadded = vatNorm.length === 8 ? `0${vatNorm}` : vatNorm;
-    let name =
+    const name =
       issuerNames.get(vatNorm) ??
       issuerNames.get(vatPadded) ??
       issuerNames.get(vat);
     if (!name) {
       failed.push({
         vatNumber: vat,
-        error: requestDocsError ?? "RequestDocs 404 ή κενή απάντηση — δεν βρέθηκαν επωνυμίες",
+        error: requestDocsError ?? "Δεν βρέθηκε στο RequestDocs",
       });
-      await new Promise((r) => setTimeout(r, 100));
       continue;
     }
-    if (name && name.trim().length > 1) {
+    if (name.trim().length > 1) {
       const vat9 = normalizeGreekVat(vat);
       await prisma.supplier.update({
         where: { id: s.id },
-        data: {
-          name: name.trim().slice(0, 200),
-          vatNumber: vat9,
-        },
+        data: { name: name.trim().slice(0, 200), vatNumber: vat9 },
       });
-      updated.push({
-        id: s.id,
-        vatNumber: vat,
-        oldName: s.name,
-        newName: name.trim().slice(0, 200),
-      });
+      updated.push({ id: s.id, vatNumber: vat, oldName: s.name, newName: name.trim().slice(0, 200) });
     }
-    await new Promise((r) => setTimeout(r, 300));
   }
 
+  const vatNormCount = suppliers.filter((s) => (s.vatNumber ?? "").replace(/\D/g, "").length === 8).length;
   for (const s of suppliers) {
-    const vat = s.vatNumber ?? "";
-    const digits = vat.replace(/\D/g, "");
+    const digits = (s.vatNumber ?? "").replace(/\D/g, "");
     if (digits.length === 8) {
-      const vat9 = `0${digits}`;
       await prisma.supplier.update({
         where: { id: s.id },
-        data: { vatNumber: vat9 },
+        data: { vatNumber: `0${digits}` },
       });
     }
   }
 
   const hint =
     !requestDocsOk && failed.length > 0
-      ? `RequestDocs: ${requestDocsError ?? "άγνωστο σφάλμα"} — Ενημερώστε χειροκίνητα τα ονόματα από Admin > Προμηθευτές.`
+      ? `RequestDocs: ${requestDocsError ?? "άγνωστο σφάλμα"} — Ενημερώστε χειροκίνητα από Προμηθευτές.`
       : null;
 
   return NextResponse.json({
     repaired: updated.length,
     failedCount: failed.length,
-    vatNormalized: suppliers.filter((s) => (s.vatNumber ?? "").replace(/\D/g, "").length === 8).length,
+    vatNormalized: vatNormCount,
     requestDocsOk,
     requestDocsError,
     hint,

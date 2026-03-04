@@ -65,10 +65,13 @@ model Expense {
   paymentMethod    String
   notes            String?
   imagePath        String?
-  source           String?         // "MYDATA" when imported from myDATA
+  source           String?
   userEdited       Boolean         @default(false)
   myDataExpenseId  String?         @unique
   myDataExpense    MyDataExpense?  @relation(fields: [myDataExpenseId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([supplierId])
 }
 
 model MyDataExpense {
@@ -96,6 +99,9 @@ model MyDataExpense {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   expense               Expense?
+
+  @@index([issueDate])
+  @@index([issuerVat])
 }
 
 model Staff {
@@ -132,10 +138,12 @@ model ElectronicOperator {
 }
 
 model Supplier {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   name            String
   defaultCategory String
-  vatNumber       String?
+  vatNumber       String?   @unique
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
   expenses        Expense[]
 }
 
@@ -156,6 +164,7 @@ model CompanySettings {
   companyVat            String?
   mydataUserId          String?
   mydataSubscriptionKey String?
+  lastMyDataMark        String?
   updatedAt             DateTime @updatedAt
 }
 

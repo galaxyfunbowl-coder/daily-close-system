@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
-
 import { getNextXtNumber } from "@/lib/next-xt-number";
+import { z } from "zod";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+const CreateExpenseSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD required"),
+  invoiceNumber: z.string().optional().nullable(),
+  noInvoice: z.boolean().optional(),
+  supplierId: z.string().optional().nullable(),
+  category: z.string().optional().default(""),
+  amount: z.union([z.number(), z.string().transform(Number)]).pipe(z.number({ message: "Valid amount required" })),
+  paymentMethod: z.string().optional().default("Μετρητά"),
+  notes: z.string().optional().nullable(),
+});
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth();
@@ -49,44 +60,34 @@ export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if (auth) return auth;
   try {
-    const body = await request.json();
-    const date = typeof body.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
-      ? body.date
-      : null;
-    if (!date) {
-      return NextResponse.json({ error: "Valid date (YYYY-MM-DD) required" }, { status: 400 });
+    const raw = await request.json();
+    const parsed = CreateExpenseSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
-    let invoiceNumber: string | null = typeof body.invoiceNumber === "string" ? body.invoiceNumber.trim() : null;
-    if (body.noInvoice === true && (!invoiceNumber || invoiceNumber === "")) {
+    const body = parsed.data;
+
+    let invoiceNumber: string | null = body.invoiceNumber?.trim() || null;
+    if (body.noInvoice === true && !invoiceNumber) {
       invoiceNumber = await getNextXtNumber();
     }
-    const supplierId = typeof body.supplierId === "string" && body.supplierId ? body.supplierId : null;
-    const category = typeof body.category === "string" ? body.category.trim() : "";
-    const amount = typeof body.amount === "number" ? body.amount : parseFloat(body.amount);
-    const paymentMethod = typeof body.paymentMethod === "string" ? body.paymentMethod.trim() : "";
-    const notes = typeof body.notes === "string" ? body.notes.trim() : null;
+    const supplierId = body.supplierId || null;
 
-    if (Number.isNaN(amount)) {
-      return NextResponse.json({ error: "Valid amount required" }, { status: 400 });
-    }
-
-    let finalCategory = category;
-    if (supplierId && !category) {
-      const supplier = await prisma.supplier.findUnique({
-        where: { id: supplierId },
-      });
+    let finalCategory = body.category;
+    if (supplierId && !finalCategory) {
+      const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
       if (supplier) finalCategory = supplier.defaultCategory;
     }
 
     const expense = await prisma.expense.create({
       data: {
-        date,
+        date: body.date,
         invoiceNumber: invoiceNumber ?? undefined,
         supplierId: supplierId ?? undefined,
-        category: finalCategory,
-        amount,
-        paymentMethod: paymentMethod || "Other",
-        notes: notes ?? undefined,
+        category: finalCategory || "Λοιπά",
+        amount: body.amount,
+        paymentMethod: body.paymentMethod || "Μετρητά",
+        notes: body.notes?.trim() ?? undefined,
       },
     });
     return NextResponse.json({ id: expense.id, ok: true });
