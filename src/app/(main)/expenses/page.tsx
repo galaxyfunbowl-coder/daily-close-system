@@ -335,7 +335,10 @@ export default function ExpensesPage() {
         return;
       }
       loadExpenses();
-      alert(`Διορθώθηκαν ${data.repaired} προμηθευτές${data.failedCount ? `. Αποτυχία: ${data.failedCount}` : ""}`);
+      const failMsg = data.failedCount
+        ? `\nΑποτυχία: ${data.failedCount}${data.failed?.[0] ? `\nΠρώτο σφάλμα: ${data.failed[0].error}` : ""}`
+        : "";
+      alert(`Διορθώθηκαν ${data.repaired} προμηθευτές${failMsg}`);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Σφάλμα δικτύου");
     } finally {

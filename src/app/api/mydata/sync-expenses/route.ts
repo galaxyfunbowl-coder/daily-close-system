@@ -49,7 +49,7 @@ function getCachedName(vat: string): string | undefined {
 }
 
 function isFallbackName(name: string, vat: string): boolean {
-  return name === `Προμηθευτής ${vat}` || name === `Προμηθευτής ${vat.replace(/\D/g, "")}`;
+  return name === `Προμηθευτής ${vat}`;
 }
 
 async function getOrCreateSupplier(
@@ -58,7 +58,7 @@ async function getOrCreateSupplier(
   creds: { userId: string; subscriptionKey: string }
 ): Promise<{ id: string; defaultCategory: string } | null> {
   if (!issuerVat && !issuerName) return null;
-  const vat = issuerVat?.trim().replace(/\D/g, "") || issuerVat?.trim();
+  const vat = issuerVat?.trim() ?? "";
   let name = issuerName?.trim();
   if (!name && vat) {
     const cached = getCachedName(vat);
@@ -78,22 +78,18 @@ async function getOrCreateSupplier(
   }
   const fallbackName = vat ? `Προμηθευτής ${vat}` : "Άγνωστος προμηθευτής";
   name = (name || fallbackName).slice(0, 200);
-  const vatNorm = vat?.replace(/\D/g, "").replace(/^0+/, "") ?? "";
-  const vatPadded = vatNorm.length === 8 ? `0${vatNorm}` : vatNorm;
-  const existing = vat
+  const vatDigits = vat.replace(/\D/g, "");
+  const searchVats = Array.from(new Set([vat, vatDigits].filter(Boolean)));
+  const existing = searchVats.length > 0
     ? await prisma.supplier.findFirst({
         where: {
-          OR: [
-            { vatNumber: vat },
-            { vatNumber: vatNorm },
-            { vatNumber: vatPadded },
-          ],
+          OR: searchVats.map((v) => ({ vatNumber: v })),
         },
         select: { id: true, defaultCategory: true, name: true },
       })
     : null;
   if (existing) {
-    if (name !== fallbackName && isFallbackName(existing.name, vat ?? "")) {
+    if (name !== fallbackName && isFallbackName(existing.name, vat)) {
       await prisma.supplier.update({
         where: { id: existing.id },
         data: { name },
@@ -105,7 +101,7 @@ async function getOrCreateSupplier(
     data: {
       name,
       defaultCategory: "Λοιπά",
-      vatNumber: vat ?? undefined,
+      vatNumber: vat || undefined,
     },
     select: { id: true, defaultCategory: true },
   });

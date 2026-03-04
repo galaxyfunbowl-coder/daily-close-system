@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Department, PaymentMethod } from "@prisma/client";
 import { DEPARTMENT_LABELS, BOWLING_SUBLABELS } from "@/lib/constants";
@@ -56,7 +56,7 @@ function weekdayLabel(dateStr: string): string {
   return days[d.getDay()];
 }
 
-export default function DailyPage() {
+function DailyPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [date, setDate] = useState(() => {
@@ -676,5 +676,13 @@ export default function DailyPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function DailyPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center p-4">Φόρτωση...</div>}>
+      <DailyPageContent />
+    </Suspense>
   );
 }
