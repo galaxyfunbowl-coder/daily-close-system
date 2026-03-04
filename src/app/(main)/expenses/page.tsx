@@ -57,6 +57,7 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [fixedExpenses, setFixedExpenses] = useState<{ amount: number }[]>([]);
+  const [payrollTotal, setPayrollTotal] = useState(0);
   const [filterMonth, setFilterMonth] = useState(currentMonthISO());
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
@@ -91,10 +92,11 @@ export default function ExpensesPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [expRes, supRes, fixedRes] = await Promise.all([
+      const [expRes, supRes, fixedRes, payrollRes] = await Promise.all([
         fetch(`/api/expenses?${new URLSearchParams({ from, to })}`),
         fetch("/api/suppliers"),
         fetch(`/api/admin/fixed-expenses?month=${filterMonth}`),
+        fetch(`/api/admin/staff-salaries?month=${filterMonth}`),
       ]);
       if (cancelled) return;
       if (expRes.ok) setExpenses(await expRes.json());
@@ -104,6 +106,13 @@ export default function ExpensesPage() {
         setFixedExpenses(fixedData.items ?? []);
       } else {
         setFixedExpenses([]);
+      }
+      if (payrollRes.ok) {
+        const payrollData = await payrollRes.json();
+        const total = (payrollData.salaries ?? []).reduce((s: number, r: { amount: number }) => s + r.amount, 0);
+        setPayrollTotal(total);
+      } else {
+        setPayrollTotal(0);
       }
       setLoading(false);
     })();
@@ -366,7 +375,7 @@ export default function ExpensesPage() {
             <>
               <span className="ml-2 text-sm font-normal text-neutral-500 dark:text-neutral-400">
                 — σύνολο εξόδων{" "}
-                {formatAmount(expenses.reduce((s, e) => s + e.amount, 0) + fixedExpenses.reduce((s, e) => s + e.amount, 0))} €
+                {formatAmount(expenses.reduce((s, e) => s + e.amount, 0) + fixedExpenses.reduce((s, e) => s + e.amount, 0) + payrollTotal)} €
               </span>
               <span className="ml-2 text-sm font-normal text-neutral-500 dark:text-neutral-400">
                 — {expenses.length} {expenses.length === 1 ? "τιμολόγιο" : "τιμολόγια"}
