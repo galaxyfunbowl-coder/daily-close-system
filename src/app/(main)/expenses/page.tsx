@@ -289,6 +289,9 @@ export default function ExpensesPage() {
       if (data.errors?.length) {
         alert(`${msg}\nΣφάλματα: ${data.errors.length}`);
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert(`Σφάλμα δικτύου: ${msg}\n\nΕλέγξτε: (1) Είστε συνδεδεμένοι; (2) Το API key στο .env.local; (3) Firewall/antivirus.`);
     } finally {
       setSyncing(false);
     }
