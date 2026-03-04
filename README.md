@@ -124,9 +124,17 @@
 ```
 MYDATA_USER_ID=your_mydata_user_id
 MYDATA_SUBSCRIPTION_KEY=your_subscription_key
-MYDATA_BASE_URL=https://mydataapi.aade.gr
-MYDATA_TIMEOUT_MS=15000
+MYDATA_BASE_URL=https://mydata.aade.gr
+MYDATA_TIMEOUT_MS=90000
 ```
+
+**Σημείωση:** Αν `mydataapi.aade.gr` δίνει ENOTFOUND, δοκιμάστε `https://mydata.aade.gr`. Το σωστό URL βρίσκεται στο portal της ΑΑΔΕ.
+
+### Αν το sync κολλάει ή timeout
+
+- Ελέγξτε στο portal ΑΑΔΕ ότι τα credentials είναι ενεργά και το API είναι διαθέσιμο
+- Δοκιμάστε με μήνα που έχει πραγματικά τιμολόγια (όχι μελλοντικό)
+- Αυξήστε `MYDATA_TIMEOUT_MS` (π.χ. 120000 για 2 λεπτά)
 
 ### Τι κάνει το sync
 

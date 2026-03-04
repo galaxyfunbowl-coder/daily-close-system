@@ -69,6 +69,7 @@ export default function DailyPage() {
   const [electronicOperators, setElectronicOperators] = useState<ElectronicOperatorOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncingMyData, setSyncingMyData] = useState(false);
   const [error, setError] = useState("");
 
   const loadDay = useCallback(async (d: string) => {
@@ -211,6 +212,32 @@ export default function DailyPage() {
     setDay({ ...day, partyEvents: day.partyEvents.filter((_, i) => i !== index) });
   }
 
+  async function importMyDataExpenses() {
+    setSyncingMyData(true);
+    setError("");
+    try {
+      const res = await fetch("/api/mydata/sync-expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dateFrom: date, dateTo: date }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Σφάλμα sync myDATA");
+        return;
+      }
+      const msg = `myDATA: ${data.fetched} τιμολόγια — ${data.inserted} νέα, ${data.updated} ενημερωμένα`;
+      alert(msg);
+      if (data.fetched > 0 || data.inserted > 0 || data.updated > 0) {
+        router.push("/expenses");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Σφάλμα δικτύου");
+    } finally {
+      setSyncingMyData(false);
+    }
+  }
+
   const totalRevenueFromLines =
     day?.revenueLines.reduce((s, r) => s + r.total, 0) ?? 0;
   const totalRevenueFromParties =
@@ -277,6 +304,27 @@ export default function DailyPage() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Καθημερινό Κλείσιμο</h1>
+
+      {/* SECTION — myDATA IMPORT */}
+      <section className="card-section">
+        <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Έξοδα</h2>
+        <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+          Εισαγωγή εξόδων από myDATA για την ημέρα {date}.
+        </p>
+        <button
+          type="button"
+          onClick={importMyDataExpenses}
+          disabled={syncingMyData}
+          className="rounded bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {syncingMyData ? "Συγχρονισμός..." : "Εισαγωγή εξόδων από myDATA"}
+        </button>
+        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+          <a href={`/expenses`} className="text-blue-600 dark:text-blue-400 hover:underline">
+            Δείτε όλα τα εξόδα →
+          </a>
+        </p>
+      </section>
 
       {/* SECTION A — GENERAL */}
       <section className="card-section">

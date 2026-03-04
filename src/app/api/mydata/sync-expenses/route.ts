@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
 import { requestMyExpenses } from "@/lib/mydata/client";
 import { parseMyExpensesResponse, type NormalizedMyDataExpense } from "@/lib/mydata/parser";
+import { getMyDataCredentials } from "@/lib/mydata/credentials";
 
 export const maxDuration = 60;
 
@@ -23,16 +24,19 @@ function fallbackUniqueKey(n: NormalizedMyDataExpense): string {
   return parts.join("|");
 }
 
+function buildInvoiceNumber(n: NormalizedMyDataExpense): string | null {
+  const parts = [n.series, n.aa].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
 export async function GET() {
   const auth = await requireAuth();
   if (auth) return auth;
-  const hasCredentials = Boolean(
-    process.env.MYDATA_USER_ID && process.env.MYDATA_SUBSCRIPTION_KEY
-  );
+  const creds = await getMyDataCredentials();
   return NextResponse.json({
     ok: true,
-    ready: hasCredentials,
-    message: hasCredentials ? "myDATA API reachable" : "Credentials missing",
+    ready: Boolean(creds),
+    message: creds ? "myDATA API reachable" : "Credentials missing",
   });
 }
 
@@ -88,7 +92,14 @@ export async function POST(request: NextRequest) {
         message: "Dry run – AADE not called",
       });
     }
-    const xmlText = await requestMyExpenses(dateFrom, dateTo);
+    const creds = await getMyDataCredentials();
+    if (!creds) {
+      return NextResponse.json(
+        { error: "myDATA credentials missing. Set MYDATA_USER_ID and MYDATA_SUBSCRIPTION_KEY in .env.local or CompanySettings." },
+        { status: 400 }
+      );
+    }
+    const xmlText = await requestMyExpenses(dateFrom, dateTo, creds);
     const normalized = parseMyExpensesResponse(xmlText);
     fetched = normalized.length;
 
@@ -106,6 +117,16 @@ export async function POST(request: NextRequest) {
         [n.issuerName, n.issuerVat, n.aa, n.series]
           .filter(Boolean)
           .join(" ") || "myDATA έξοδο";
+      const invoiceNumber = buildInvoiceNumber(n);
+
+      const supplierMatch = n.issuerVat
+        ? await prisma.supplier.findFirst({
+            where: { vatNumber: n.issuerVat },
+            select: { id: true, defaultCategory: true },
+          })
+        : null;
+      const supplierId = supplierMatch?.id ?? null;
+      const category = supplierMatch?.defaultCategory ?? "Uncategorized";
 
       const sourceRaw = n.rawSnippet
         ? JSON.stringify(n.rawSnippet)
@@ -154,8 +175,10 @@ export async function POST(request: NextRequest) {
               data: {
                 date: issueDate,
                 amount: totalAmount,
-                category: existing.expense.category || "Uncategorized",
+                category: existing.expense.category || category,
                 notes: description,
+                supplierId: supplierId ?? existing.expense.supplierId,
+                invoiceNumber: invoiceNumber ?? existing.expense.invoiceNumber,
               },
             });
           }
@@ -163,8 +186,9 @@ export async function POST(request: NextRequest) {
           await prisma.expense.create({
             data: {
               date: issueDate,
-              invoiceNumber: n.aa ?? n.series ?? null,
-              category: "Uncategorized",
+              invoiceNumber: invoiceNumber,
+              supplierId: supplierId,
+              category,
               amount: totalAmount,
               paymentMethod: "Τραπεζική μεταφορά",
               notes: description,
@@ -184,8 +208,9 @@ export async function POST(request: NextRequest) {
         const expense = await prisma.expense.create({
           data: {
             date: issueDate,
-            invoiceNumber: n.aa ?? n.series ?? null,
-            category: "Uncategorized",
+            invoiceNumber: invoiceNumber,
+            supplierId: supplierId,
+            category,
             amount: totalAmount,
             paymentMethod: "Τραπεζική μεταφορά",
             notes: description,

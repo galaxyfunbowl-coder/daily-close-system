@@ -8,23 +8,31 @@ import https from "https";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
+export type MyDataCredentialsParam = {
+  userId: string;
+  subscriptionKey: string;
+};
+
 export function requestMyExpenses(
   dateFrom: string,
-  dateTo: string
+  dateTo: string,
+  credentials?: MyDataCredentialsParam
 ): Promise<string> {
   if (!DATE_REGEX.test(dateFrom) || !DATE_REGEX.test(dateTo)) {
     return Promise.reject(new Error("Invalid date format. Use YYYY-MM-DD."));
   }
 
-  const userId = process.env.MYDATA_USER_ID;
-  const subscriptionKey = process.env.MYDATA_SUBSCRIPTION_KEY;
-  const baseUrl = process.env.MYDATA_BASE_URL ?? "https://mydataapi.aade.gr";
+  const userId =
+    credentials?.userId ?? process.env.MYDATA_USER_ID ?? "";
+  const subscriptionKey =
+    credentials?.subscriptionKey ?? process.env.MYDATA_SUBSCRIPTION_KEY ?? "";
+  const baseUrl = process.env.MYDATA_BASE_URL ?? "https://mydatapi.aade.gr";
   const timeoutMs = Number(process.env.MYDATA_TIMEOUT_MS) || 60000;
 
   if (!userId || !subscriptionKey) {
     return Promise.reject(
       new Error(
-        "myDATA credentials missing. Set MYDATA_USER_ID and MYDATA_SUBSCRIPTION_KEY."
+        "myDATA credentials missing. Set MYDATA_USER_ID and MYDATA_SUBSCRIPTION_KEY in .env.local or CompanySettings."
       )
     );
   }

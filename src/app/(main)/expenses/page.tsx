@@ -290,7 +290,7 @@ export default function ExpensesPage() {
         return;
       }
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 300000);
+      const timeoutId = setTimeout(() => controller.abort(), 600000);
       const res = await fetch("/api/mydata/sync-expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -310,7 +310,7 @@ export default function ExpensesPage() {
       const msg = e instanceof Error ? e.message : String(e);
       const isAbort = e instanceof Error && e.name === "AbortError";
       const hint = isAbort
-        ? "Το sync ξεπέρασε 5 λεπτά. Η ΑΑΔΕ μπορεί να είναι αργή ή απενεργοποιημένη."
+        ? "Το sync ξεπέρασε 10 λεπτά. Ελέγξτε στο portal ΑΑΔΕ: σωστό URL, credentials, και ότι το API είναι ενεργό."
         : "Ελέγξτε: (1) Είστε συνδεδεμένοι; (2) npm run dev τρέχει; (3) Firewall.";
       alert(`Σφάλμα: ${msg}\n\n${hint}`);
     } finally {

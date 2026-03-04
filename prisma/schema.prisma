@@ -151,6 +151,14 @@ model Closure {
   reason String
 }
 
+model CompanySettings {
+  id                    String   @id @default("main")
+  companyVat            String?
+  mydataUserId          String?
+  mydataSubscriptionKey String?
+  updatedAt             DateTime @updatedAt
+}
+
 enum Department {
   RECEPTION_BOWLING
   PAIDOTOPOS
