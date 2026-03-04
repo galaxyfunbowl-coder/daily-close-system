@@ -160,9 +160,19 @@ export async function POST(request: NextRequest) {
     const allNormalized = parseMyExpensesResponse(xmlText);
 
     const lastMark = await getLastMark();
-    const normalized = lastMark
-      ? allNormalized.filter((n) => n.mark > lastMark)
-      : allNormalized;
+
+    // Pre-check which marks already exist in DB (for all returned records)
+    const allMarksFromApi = allNormalized.map((n) => n.mark).filter(Boolean);
+    const existingInDb = await prisma.myDataExpense.findMany({
+      where: { mark: { in: allMarksFromApi } },
+      select: { mark: true },
+    });
+    const marksInDb = new Set(existingInDb.map((e) => e.mark));
+
+    // Process if: mark > lastMyDataMark (new) OR mark not in DB (deleted, re-import)
+    const normalized = allNormalized.filter(
+      (n) => !lastMark || n.mark > lastMark || !marksInDb.has(n.mark)
+    );
     fetched = normalized.length;
 
     if (fetched === 0) {
