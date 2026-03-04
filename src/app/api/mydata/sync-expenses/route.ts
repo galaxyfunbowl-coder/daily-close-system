@@ -38,16 +38,30 @@ function buildInvoiceNumber(n: NormalizedMyDataExpense): string | null {
 
 const receiverInfoCache = new Map<string, string>();
 
+function getCachedName(vat: string): string | undefined {
+  const v = vat.replace(/\D/g, "");
+  if (!v) return undefined;
+  return (
+    receiverInfoCache.get(v) ??
+    receiverInfoCache.get(v.padStart(9, "0")) ??
+    receiverInfoCache.get(v.replace(/^0+/, ""))
+  );
+}
+
+function isFallbackName(name: string, vat: string): boolean {
+  return name === `Προμηθευτής ${vat}` || name === `Προμηθευτής ${vat.replace(/\D/g, "")}`;
+}
+
 async function getOrCreateSupplier(
   issuerVat: string | undefined,
   issuerName: string | undefined,
   creds: { userId: string; subscriptionKey: string }
 ): Promise<{ id: string; defaultCategory: string } | null> {
   if (!issuerVat && !issuerName) return null;
-  const vat = issuerVat?.trim();
+  const vat = issuerVat?.trim().replace(/\D/g, "") || issuerVat?.trim();
   let name = issuerName?.trim();
   if (!name && vat) {
-    const cached = receiverInfoCache.get(vat);
+    const cached = getCachedName(vat);
     if (cached) name = cached;
     else {
       try {
@@ -55,21 +69,38 @@ async function getOrCreateSupplier(
         const fetched = parseReceiverInfoCompanyName(resp);
         if (fetched) {
           name = fetched;
-          receiverInfoCache.set(vat, fetched);
+          receiverInfoCache.set(vat.replace(/\D/g, ""), fetched);
         }
       } catch {
         // ignore - use fallback name
       }
     }
   }
-  name = (name || (vat ? `Προμηθευτής ${vat}` : "Άγνωστος προμηθευτής")).slice(0, 200);
+  const fallbackName = vat ? `Προμηθευτής ${vat}` : "Άγνωστος προμηθευτής";
+  name = (name || fallbackName).slice(0, 200);
+  const vatNorm = vat?.replace(/\D/g, "").replace(/^0+/, "") ?? "";
+  const vatPadded = vatNorm.length === 8 ? `0${vatNorm}` : vatNorm;
   const existing = vat
     ? await prisma.supplier.findFirst({
-        where: { vatNumber: vat },
-        select: { id: true, defaultCategory: true },
+        where: {
+          OR: [
+            { vatNumber: vat },
+            { vatNumber: vatNorm },
+            { vatNumber: vatPadded },
+          ],
+        },
+        select: { id: true, defaultCategory: true, name: true },
       })
     : null;
-  if (existing) return existing;
+  if (existing) {
+    if (name !== fallbackName && isFallbackName(existing.name, vat ?? "")) {
+      await prisma.supplier.update({
+        where: { id: existing.id },
+        data: { name },
+      });
+    }
+    return { id: existing.id, defaultCategory: existing.defaultCategory };
+  }
   const created = await prisma.supplier.create({
     data: {
       name,
@@ -165,7 +196,10 @@ export async function POST(request: NextRequest) {
       const docsText = await requestDocs(dateFrom, dateTo, creds);
       const issuerNames = parseIssuerNamesFromRequestDocs(docsText);
       for (const [vat, name] of issuerNames) {
-        if (vat && name) receiverInfoCache.set(vat, name);
+        if (vat && name) {
+          const vatNorm = vat.replace(/\D/g, "");
+          if (vatNorm) receiverInfoCache.set(vatNorm, name);
+        }
       }
     } catch {
       // Continue without RequestDocs names; getOrCreateSupplier will use requestReceiverInfo fallback

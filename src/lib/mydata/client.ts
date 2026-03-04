@@ -108,9 +108,14 @@ export function parseIssuerNamesFromRequestDocs(responseText: string): Map<strin
     const issuer = r.issuer ?? r.Issuer;
     if (issuer && typeof issuer === "object") {
       const i = issuer as Record<string, unknown>;
-      const vat = String(i.vatNumber ?? i.VatNumber ?? i.vat_number ?? "").trim();
-      const name = String(i.name ?? i.Name ?? "").trim();
-      if (vat && name && vat.length >= 9) map.set(vat, name);
+      const vatRaw = String(
+        i.vatNumber ?? i.VatNumber ?? i.vat_number ?? i.vat ?? i.afm ?? ""
+      ).trim();
+      const name = String(
+        i.name ?? i.Name ?? i.companyName ?? i.registrationName ?? ""
+      ).trim();
+      const vat = vatRaw.replace(/\D/g, "");
+      if (vat && name && vat.length >= 8) map.set(vat, name);
     }
     for (const v of Object.values(r)) {
       if (Array.isArray(v)) v.forEach(extract);
@@ -130,9 +135,10 @@ export function requestReceiverInfo(
   credentials?: MyDataCredentialsParam
 ): Promise<string> {
   const vatClean = String(vat).replace(/\D/g, "");
-  if (!vatClean || vatClean.length < 9) {
+  if (!vatClean || vatClean.length < 8) {
     return Promise.reject(new Error("Invalid VAT for RequestReceiverInfo"));
   }
+  const vat9 = vatClean.length === 9 ? vatClean : vatClean.padStart(9, "0");
   const userId =
     credentials?.userId ?? process.env.MYDATA_USER_ID ?? "";
   const subscriptionKey =
@@ -146,7 +152,7 @@ export function requestReceiverInfo(
   }
   const base = baseUrl.replace(/\/$/, "");
   const url = new URL(`${base}/myDATA/RequestReceiverInfo`);
-  url.searchParams.set("vat", vatClean);
+  url.searchParams.set("vat", vat9);
   return doRequest(url, userId, subscriptionKey, timeoutMs);
 }
 

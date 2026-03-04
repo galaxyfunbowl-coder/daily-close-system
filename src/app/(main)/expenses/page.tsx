@@ -78,6 +78,7 @@ export default function ExpensesPage() {
   const [editForm, setEditForm] = useState({ date: "", invoiceNumber: "", noInvoice: false, supplierId: "", category: "", amount: "", isCredit: false, paymentMethod: "", notes: "" });
   const [editImage, setEditImage] = useState<File | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [repairing, setRepairing] = useState(false);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   const { from, to } = monthToFromTo(filterMonth);
@@ -323,6 +324,25 @@ export default function ExpensesPage() {
     }
   }
 
+  async function repairSupplierNames() {
+    if (!confirm("Διόρθωση ονομάτων προμηθευτών με ΑΦΜ; Θα γίνουν κλήσεις στο myDATA.")) return;
+    setRepairing(true);
+    try {
+      const res = await fetch("/api/mydata/repair-supplier-names", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error ?? "Σφάλμα διόρθωσης");
+        return;
+      }
+      loadExpenses();
+      alert(`Διορθώθηκαν ${data.repaired} προμηθευτές${data.failedCount ? `. Αποτυχία: ${data.failedCount}` : ""}`);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Σφάλμα δικτύου");
+    } finally {
+      setRepairing(false);
+    }
+  }
+
   async function uploadPdfForExpense(expenseId: string, file: File) {
     setUploadingId(expenseId);
     try {
@@ -457,6 +477,14 @@ export default function ExpensesPage() {
             className="btn-primary shrink-0"
           >
             {syncing ? "..." : "Sync myDATA"}
+          </button>
+          <button
+            type="button"
+            onClick={repairSupplierNames}
+            disabled={repairing}
+            className="rounded border border-neutral-300 dark:border-neutral-600 bg-neutral-100 dark:bg-neutral-700 px-3 py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600 shrink-0"
+          >
+            {repairing ? "..." : "Διόρθωση ονομάτων"}
           </button>
         </div>
       </section>
