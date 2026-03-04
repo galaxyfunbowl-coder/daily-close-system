@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
 import {
   requestMyExpenses,
-  requestDocsIssuerNames,
+  requestDocsEnriched,
 } from "@/lib/mydata/client";
 import { parseMyExpensesResponse, type NormalizedMyDataExpense } from "@/lib/mydata/parser";
 import { getMyDataCredentials } from "@/lib/mydata/credentials";
@@ -176,9 +176,10 @@ export async function POST(request: NextRequest) {
     }
 
     const nameCache = new Map<string, string>();
+    const urlsByMark = new Map<string, string>();
     try {
-      const issuerNames = await requestDocsIssuerNames(dateFrom, dateTo, creds, 31);
-      for (const [vat, name] of issuerNames) {
+      const docsResult = await requestDocsEnriched(dateFrom, dateTo, creds, 31);
+      for (const [vat, name] of docsResult.issuerNames) {
         if (vat && name) {
           const vatNorm = vat.replace(/\D/g, "");
           if (vatNorm) {
@@ -188,6 +189,7 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+      for (const [mk, url] of docsResult.urlsByMark) urlsByMark.set(mk, url);
     } catch {
       // RequestDocs not critical
     }
@@ -213,15 +215,14 @@ export async function POST(request: NextRequest) {
 
       const issueDate = n.issueDate ?? todayISO();
       const totalAmount = n.totalAmount ?? 0;
-      const description =
-        [n.issuerName, n.issuerVat, n.aa, n.series].filter(Boolean).join(" ") || "myDATA έξοδο";
-      const invoiceNumber = buildInvoiceNumber(n.series, n.aa) ?? (n.mark ? String(n.mark) : null);
+      const invoiceNumber = buildInvoiceNumber(n.series, n.aa);
 
       const supplierMatch = await findOrCreateSupplier(n.issuerVat, n.issuerName, nameCache);
       const supplierId = supplierMatch?.id ?? null;
       const category = supplierMatch?.defaultCategory ?? "Λοιπά";
 
       const sourceRaw = n.rawSnippet ? JSON.stringify(n.rawSnippet) : null;
+      const invoiceUrl = urlsByMark.get(n.mark) ?? undefined;
       const myDataData = {
         mark: n.mark,
         uid: n.uid ?? undefined,
@@ -239,6 +240,7 @@ export async function POST(request: NextRequest) {
         cancellationMark: n.cancellationMark ?? undefined,
         isCancelled: n.isCancelled ?? false,
         sourceRaw: sourceRaw ?? undefined,
+        downloadingInvoiceUrl: invoiceUrl,
       };
 
       const existing = existingByMark.get(n.mark);
@@ -260,7 +262,6 @@ export async function POST(request: NextRequest) {
                   date: issueDate,
                   amount: totalAmount,
                   category: existing.expense.category || category,
-                  notes: description,
                   supplierId: supplierId ?? existing.expense.supplierId,
                   invoiceNumber: invoiceNumber ?? existing.expense.invoiceNumber,
                 },
@@ -275,7 +276,7 @@ export async function POST(request: NextRequest) {
                 category,
                 amount: totalAmount,
                 paymentMethod: "Τραπεζική μεταφορά",
-                notes: description,
+                notes: "",
                 source: "MYDATA",
                 userEdited: false,
                 myDataExpenseId: myDataExpense.id,
@@ -296,7 +297,7 @@ export async function POST(request: NextRequest) {
               category,
               amount: totalAmount,
               paymentMethod: "Τραπεζική μεταφορά",
-              notes: description,
+              notes: "",
               source: "MYDATA",
               userEdited: false,
               myDataExpenseId: myDataExpense.id,

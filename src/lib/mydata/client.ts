@@ -87,25 +87,30 @@ export function requestDocs(
  * retries per-day to get partial results. Some days may still fail.
  * @param maxRetryDays - when retrying per-day, cap at this many days to avoid too many requests
  */
-export async function requestDocsIssuerNames(
+export type RequestDocsResult = {
+  issuerNames: Map<string, string>;
+  urlsByMark: Map<string, string>;
+};
+
+export async function requestDocsEnriched(
   dateFrom: string,
   dateTo: string,
   credentials: MyDataCredentialsParam | undefined,
   maxRetryDays: number
-): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  const merge = (m: Map<string, string>): void => {
-    for (const [vat, name] of m) {
-      if (vat && name) map.set(vat, name);
-    }
+): Promise<RequestDocsResult> {
+  const issuerNames = new Map<string, string>();
+  const urlsByMark = new Map<string, string>();
+  const mergeResult = (r: ReturnType<typeof parseRequestDocsData>): void => {
+    for (const [k, v] of r.issuerNames) if (k && v) issuerNames.set(k, v);
+    for (const [k, v] of r.urlsByMark) if (k && v) urlsByMark.set(k, v);
   };
 
   try {
     const docsText = await requestDocs(dateFrom, dateTo, credentials);
-    merge(parseIssuerNamesFromRequestDocs(docsText));
-    return map;
+    mergeResult(parseRequestDocsData(docsText));
+    return { issuerNames, urlsByMark };
   } catch {
-    // Retry per-day when range fails (e.g. cryptoKey cannot be empty for some dates)
+    // Retry per-day when range fails
   }
 
   const allDates = iterateDates(dateFrom, dateTo);
@@ -115,13 +120,24 @@ export async function requestDocsIssuerNames(
   for (const d of dates) {
     try {
       const docsText = await requestDocs(d, d, credentials);
-      merge(parseIssuerNamesFromRequestDocs(docsText));
+      mergeResult(parseRequestDocsData(docsText));
     } catch {
       // Skip this day
     }
     await new Promise((r) => setTimeout(r, 300));
   }
-  return map;
+  return { issuerNames, urlsByMark };
+}
+
+/** @deprecated Use requestDocsEnriched */
+export async function requestDocsIssuerNames(
+  dateFrom: string,
+  dateTo: string,
+  credentials: MyDataCredentialsParam | undefined,
+  maxRetryDays: number
+): Promise<Map<string, string>> {
+  const result = await requestDocsEnriched(dateFrom, dateTo, credentials, maxRetryDays);
+  return result.issuerNames;
 }
 
 function iterateDates(dateFrom: string, dateTo: string): string[] {
@@ -136,9 +152,67 @@ function iterateDates(dateFrom: string, dateTo: string): string[] {
   return out;
 }
 
+export type RequestDocsInvoiceInfo = {
+  issuerName: string;
+  downloadingInvoiceUrl?: string;
+};
+
 /**
- * Extract Map<vatNumber, companyName> from RequestDocs response (invoicesDoc).
- * issuer = εκδότης = supplier for our received invoices.
+ * Extract Map<vatNumber, InvoiceInfo> from RequestDocs response (invoicesDoc).
+ * Also extracts downloadingInvoiceUrl per mark.
+ */
+export function parseRequestDocsData(responseText: string): {
+  issuerNames: Map<string, string>;
+  urlsByMark: Map<string, string>;
+} {
+  const issuerNames = new Map<string, string>();
+  const urlsByMark = new Map<string, string>();
+  const trimmed = responseText.trim();
+  if (!trimmed) return { issuerNames, urlsByMark };
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    parseTagValue: true,
+    trimValues: true,
+  });
+  let parsed: unknown;
+  try {
+    parsed = trimmed.startsWith("{") || trimmed.startsWith("[")
+      ? JSON.parse(trimmed)
+      : parser.parse(trimmed);
+  } catch {
+    return { issuerNames, urlsByMark };
+  }
+  const extract = (obj: unknown): void => {
+    if (!obj || typeof obj !== "object") return;
+    const r = obj as Record<string, unknown>;
+    const issuer = r.issuer ?? r.Issuer;
+    if (issuer && typeof issuer === "object") {
+      const i = issuer as Record<string, unknown>;
+      const vatRaw = String(
+        i.vatNumber ?? i.VatNumber ?? i.vat_number ?? i.vat ?? i.afm ?? ""
+      ).trim();
+      const name = String(
+        i.name ?? i.Name ?? i.companyName ?? i.registrationName ?? ""
+      ).trim();
+      const vat = vatRaw.replace(/\D/g, "");
+      if (vat && name && vat.length >= 8) issuerNames.set(vat, name);
+    }
+    const mark = String(r.mark ?? r.Mark ?? r.MARK ?? "").trim();
+    const dlUrl = String(r.downloadingInvoiceUrl ?? r.DownloadingInvoiceUrl ?? "").trim();
+    if (mark && dlUrl && dlUrl.startsWith("http")) {
+      urlsByMark.set(mark, dlUrl);
+    }
+    for (const v of Object.values(r)) {
+      if (Array.isArray(v)) v.forEach(extract);
+      else extract(v);
+    }
+  };
+  extract(parsed);
+  return { issuerNames, urlsByMark };
+}
+
+/**
+ * @deprecated Use parseRequestDocsData instead
  */
 export function parseIssuerNamesFromRequestDocs(responseText: string): Map<string, string> {
   const map = new Map<string, string>();

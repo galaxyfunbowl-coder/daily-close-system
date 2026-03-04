@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   const expenses = await prisma.expense.findMany({
     where,
-    include: { supplier: true },
+    include: { supplier: true, myDataExpense: { select: { downloadingInvoiceUrl: true } } },
     orderBy: { date: "desc" },
   });
 
@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
       notes: e.notes ?? "",
       imagePath: e.imagePath ?? null,
       source: e.source ?? null,
+      downloadingInvoiceUrl: e.myDataExpense?.downloadingInvoiceUrl ?? null,
     }))
   );
 }

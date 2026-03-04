@@ -92,6 +92,7 @@ model MyDataExpense {
   cancellationMark      String?
   isCancelled           Boolean   @default(false)
   sourceRaw             String?   // JSON string for debugging
+  downloadingInvoiceUrl String?
   attachmentPath        String?
   attachmentOriginalName String?
   attachmentMime        String?

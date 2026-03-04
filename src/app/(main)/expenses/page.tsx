@@ -15,6 +15,7 @@ type Expense = {
   notes: string;
   imagePath: string | null;
   source: string | null;
+  downloadingInvoiceUrl: string | null;
 };
 
 type Supplier = { id: string; name: string; defaultCategory: string };
@@ -574,6 +575,9 @@ export default function ExpensesPage() {
                         {e.source === "MYDATA" && !e.imagePath && (
                           <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">PDF missing</span>
                         )}
+                        {e.downloadingInvoiceUrl && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">link</span>
+                        )}
                       </div>
                       <p className={`text-sm ${e.amount < 0 ? "text-green-600 dark:text-green-400" : "text-neutral-600 dark:text-neutral-400"}`}>{e.supplierName ?? e.category} — {formatAmount(e.amount)} €{e.amount < 0 ? " (πιστωτικό)" : ""}</p>
                       {e.notes && <p className="text-xs text-neutral-500 dark:text-neutral-400">{e.notes}</p>}
@@ -602,6 +606,34 @@ export default function ExpensesPage() {
                           {uploadingId === e.id ? "..." : "📤 Ανέβασμα PDF"}
                         </label>
                       ) : null}
+                      {e.downloadingInvoiceUrl && (
+                        <span className="flex gap-2 mt-1">
+                          <a
+                            href={e.downloadingInvoiceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-green-600 dark:text-green-400 hover:underline"
+                          >
+                            Άνοιγμα τιμολογίου
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => navigator.clipboard.writeText(e.downloadingInvoiceUrl!)}
+                            className="text-xs text-neutral-500 dark:text-neutral-400 hover:underline"
+                          >
+                            Copy link
+                          </button>
+                          {e.invoiceNumber && (
+                            <button
+                              type="button"
+                              onClick={() => navigator.clipboard.writeText(e.invoiceNumber)}
+                              className="text-xs text-neutral-500 dark:text-neutral-400 hover:underline"
+                            >
+                              Copy #{e.invoiceNumber}
+                            </button>
+                          )}
+                        </span>
+                      )}
                     </div>
                     <div className="flex gap-2 shrink-0">
                       <button type="button" onClick={() => startEdit(e)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Επεξεργασία</button>

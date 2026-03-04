@@ -53,6 +53,30 @@ function toDateStr(val: unknown): string | undefined {
   return undefined;
 }
 
+function extractIssuerName(obj: Record<string, unknown>): string | undefined {
+  const direct = toStr(
+    obj.issuerName ?? obj.issuername ?? obj.company_name ??
+    obj.counterPartyName ?? obj.counterpartyName ?? obj.counterPartName ??
+    obj.counterCompanyName ?? obj.countercompanyname ?? obj.companyName ??
+    obj.partyName ?? obj.counterName
+  );
+  if (direct) return direct;
+  const issuer = obj.issuer;
+  if (issuer && typeof issuer === "object") {
+    const i = issuer as Record<string, unknown>;
+    return toStr(i.name ?? i.Name ?? i.companyName ?? i.registrationName);
+  }
+  return undefined;
+}
+
+function extractFromHeader(obj: Record<string, unknown>, field: string): unknown {
+  const header = obj.invoiceHeader ?? obj.InvoiceHeader;
+  if (header && typeof header === "object") {
+    return (header as Record<string, unknown>)[field];
+  }
+  return undefined;
+}
+
 function collectExpensesFromNode(
   node: unknown,
   acc: NormalizedMyDataExpense[]
@@ -75,17 +99,12 @@ function collectExpensesFromNode(
       mark,
       uid: toStr(obj.uid ?? obj.UID),
       issuerVat: toStr(obj.issuerVat ?? obj.issuervat ?? obj.vat_number ?? obj.afm ?? obj.counterVatNumber ?? obj.countervatnumber),
-      issuerName: toStr(
-        obj.issuerName ?? obj.issuername ?? obj.company_name ??
-        obj.counterPartyName ?? obj.counterpartyName ?? obj.counterPartName ??
-        obj.counterCompanyName ?? obj.countercompanyname ?? obj.companyName ??
-        obj.partyName ?? obj.counterName ?? obj.issuer
-      ),
+      issuerName: extractIssuerName(obj),
       receiverVat: toStr(obj.receiverVat ?? obj.receivervat),
       issueDate: toDateStr(obj.issueDate ?? obj.issuedate ?? obj.date),
-      invoiceType: toStr(obj.invoiceType ?? obj.invoicetype ?? obj.invoice_type),
-      series: toStr(obj.series ?? obj.Series),
-      aa: toStr(obj.aa ?? obj.AA),
+      invoiceType: toStr(obj.invoiceType ?? obj.invoicetype ?? obj.invoice_type ?? extractFromHeader(obj, "invoiceType")),
+      series: toStr(obj.series ?? obj.Series ?? extractFromHeader(obj, "series")),
+      aa: toStr(obj.aa ?? obj.AA ?? extractFromHeader(obj, "aa")),
       netAmount,
       vatAmount,
       totalAmount: amount ?? totalAmount,
