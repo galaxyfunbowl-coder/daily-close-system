@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
-import {
-  requestDocs,
-  parseIssuerNamesFromRequestDocs,
-  requestReceiverInfo,
-  parseReceiverInfoCompanyName,
-} from "@/lib/mydata/client";
+import { requestDocsIssuerNames } from "@/lib/mydata/client";
 import { getMyDataCredentials } from "@/lib/mydata/credentials";
 
 const FALLBACK_PATTERN = /^Προμηθευτής\s+(\d{8,9})$/;
+
+function normalizeGreekVat(vat: string): string {
+  const digits = vat.replace(/\D/g, "");
+  return digits.length === 8 ? `0${digits}` : digits.length === 9 ? digits : vat;
+}
 
 function monthsAgo(months: number): string {
   const d = new Date();
@@ -37,16 +37,28 @@ export async function POST() {
   }
 
   const issuerNames = new Map<string, string>();
+  let requestDocsOk = false;
+  let requestDocsError: string | null = null;
   try {
     const dateFrom = monthsAgo(12);
     const dateTo = new Date().toISOString().slice(0, 10);
-    const docsText = await requestDocs(dateFrom, dateTo, creds);
-    const parsed = parseIssuerNamesFromRequestDocs(docsText);
+    const parsed = await requestDocsIssuerNames(dateFrom, dateTo, creds, 31);
     for (const [vat, name] of parsed) {
-      if (vat && name) issuerNames.set(vat.replace(/\D/g, ""), name);
+      if (vat && name) {
+        const vatNorm = vat.replace(/\D/g, "");
+        if (vatNorm) {
+          issuerNames.set(vatNorm, name);
+          if (vatNorm.length === 8) issuerNames.set(`0${vatNorm}`, name);
+          if (vatNorm.length === 9 && vatNorm.startsWith("0")) issuerNames.set(vatNorm.replace(/^0+/, ""), name);
+        }
+      }
     }
-  } catch {
-    // Continue without RequestDocs names
+    requestDocsOk = issuerNames.size > 0;
+    if (issuerNames.size === 0) {
+      requestDocsError = "Δεν βρέθηκαν επωνυμίες (cryptoKey ή άλλο σφάλμα για το εύρος ημερομηνιών)";
+    }
+  } catch (e) {
+    requestDocsError = e instanceof Error ? e.message : "Unknown error";
   }
 
   const suppliers = await prisma.supplier.findMany({
@@ -70,22 +82,21 @@ export async function POST() {
       issuerNames.get(vatPadded) ??
       issuerNames.get(vat);
     if (!name) {
-      try {
-        const resp = await requestReceiverInfo(vat, creds);
-        name = parseReceiverInfoCompanyName(resp) ?? undefined;
-      } catch (e) {
-        failed.push({
-          vatNumber: vat,
-          error: e instanceof Error ? e.message : "Unknown error",
-        });
-        await new Promise((r) => setTimeout(r, 300));
-        continue;
-      }
+      failed.push({
+        vatNumber: vat,
+        error: requestDocsError ?? "RequestDocs 404 ή κενή απάντηση — δεν βρέθηκαν επωνυμίες",
+      });
+      await new Promise((r) => setTimeout(r, 100));
+      continue;
     }
     if (name && name.trim().length > 1) {
+      const vat9 = normalizeGreekVat(vat);
       await prisma.supplier.update({
         where: { id: s.id },
-        data: { name: name.trim().slice(0, 200) },
+        data: {
+          name: name.trim().slice(0, 200),
+          vatNumber: vat9,
+        },
       });
       updated.push({
         id: s.id,
@@ -93,18 +104,34 @@ export async function POST() {
         oldName: s.name,
         newName: name.trim().slice(0, 200),
       });
-    } else if (!name) {
-      failed.push({
-        vatNumber: vat,
-        error: "Δεν βρέθηκε επωνυμία (ούτε από RequestDocs ούτε RequestReceiverInfo)",
-      });
     }
     await new Promise((r) => setTimeout(r, 300));
   }
 
+  for (const s of suppliers) {
+    const vat = s.vatNumber ?? "";
+    const digits = vat.replace(/\D/g, "");
+    if (digits.length === 8) {
+      const vat9 = `0${digits}`;
+      await prisma.supplier.update({
+        where: { id: s.id },
+        data: { vatNumber: vat9 },
+      });
+    }
+  }
+
+  const hint =
+    !requestDocsOk && failed.length > 0
+      ? `RequestDocs: ${requestDocsError ?? "άγνωστο σφάλμα"} — Ενημερώστε χειροκίνητα τα ονόματα από Admin > Προμηθευτές.`
+      : null;
+
   return NextResponse.json({
     repaired: updated.length,
     failedCount: failed.length,
+    vatNormalized: suppliers.filter((s) => (s.vatNumber ?? "").replace(/\D/g, "").length === 8).length,
+    requestDocsOk,
+    requestDocsError,
+    hint,
     updated,
     failed,
   });

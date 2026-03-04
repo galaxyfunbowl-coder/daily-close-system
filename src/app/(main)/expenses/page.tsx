@@ -335,10 +335,12 @@ export default function ExpensesPage() {
         return;
       }
       loadExpenses();
-      const failMsg = data.failedCount
+      let failMsg = data.failedCount
         ? `\nΑποτυχία: ${data.failedCount}${data.failed?.[0] ? `\nΠρώτο σφάλμα: ${data.failed[0].error}` : ""}`
         : "";
-      alert(`Διορθώθηκαν ${data.repaired} προμηθευτές${failMsg}`);
+      if (data.requestDocsError) failMsg += `\nRequestDocs: ${data.requestDocsError}`;
+      if (data.hint) failMsg += `\n\n${data.hint}`;
+      alert(`Διορθώθηκαν ${data.repaired} προμηθευτές. ΑΦΜ κανονικοποιημένα: ${data.vatNormalized ?? 0}${failMsg}`);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Σφάλμα δικτύου");
     } finally {

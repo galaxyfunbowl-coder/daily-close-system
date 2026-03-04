@@ -74,11 +74,66 @@ export function requestDocs(
     );
   }
   const base = baseUrl.replace(/\/$/, "");
-  const url = new URL(`${base}/myDATA/RequestDocs`);
+  const docsPath = process.env.MYDATA_REQUEST_DOCS_PATH ?? "/myDATA/RequestDocs";
+  const url = new URL(`${base}${docsPath.startsWith("/") ? docsPath : `/${docsPath}`}`);
   url.searchParams.set("mark", "0");
   url.searchParams.set("dateFrom", toDdMmYyyy(dateFrom));
   url.searchParams.set("dateTo", toDdMmYyyy(dateTo));
   return doRequest(url, userId, subscriptionKey, timeoutMs);
+}
+
+/**
+ * Fetches issuer names via RequestDocs. When the date range fails (e.g. cryptoKey error),
+ * retries per-day to get partial results. Some days may still fail.
+ * @param maxRetryDays - when retrying per-day, cap at this many days to avoid too many requests
+ */
+export async function requestDocsIssuerNames(
+  dateFrom: string,
+  dateTo: string,
+  credentials: MyDataCredentialsParam | undefined,
+  maxRetryDays: number
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const merge = (m: Map<string, string>): void => {
+    for (const [vat, name] of m) {
+      if (vat && name) map.set(vat, name);
+    }
+  };
+
+  try {
+    const docsText = await requestDocs(dateFrom, dateTo, credentials);
+    merge(parseIssuerNamesFromRequestDocs(docsText));
+    return map;
+  } catch {
+    // Retry per-day when range fails (e.g. cryptoKey cannot be empty for some dates)
+  }
+
+  const allDates = iterateDates(dateFrom, dateTo);
+  const dates = allDates.length > maxRetryDays
+    ? allDates.slice(-maxRetryDays)
+    : allDates;
+  for (const d of dates) {
+    try {
+      const docsText = await requestDocs(d, d, credentials);
+      merge(parseIssuerNamesFromRequestDocs(docsText));
+    } catch {
+      // Skip this day
+    }
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  return map;
+}
+
+function iterateDates(dateFrom: string, dateTo: string): string[] {
+  const out: string[] = [];
+  const from = new Date(dateFrom);
+  const to = new Date(dateTo);
+  const cur = new Date(from);
+  while (cur <= to) {
+    out.push(cur.toISOString().slice(0, 10));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
 }
 
 /**
@@ -126,83 +181,6 @@ export function parseIssuerNamesFromRequestDocs(responseText: string): Map<strin
   return map;
 }
 
-/**
- * Request company info by VAT (ΑΦΜ) - returns company name from AADE registry.
- * Endpoint: /myDATA/RequestReceiverInfo?vat={vat}
- */
-export function requestReceiverInfo(
-  vat: string,
-  credentials?: MyDataCredentialsParam
-): Promise<string> {
-  const vatClean = String(vat).replace(/\D/g, "");
-  if (!vatClean || vatClean.length < 8) {
-    return Promise.reject(new Error("Invalid VAT for RequestReceiverInfo"));
-  }
-  const vat9 = vatClean.length === 9 ? vatClean : vatClean.padStart(9, "0");
-  const userId =
-    credentials?.userId ?? process.env.MYDATA_USER_ID ?? "";
-  const subscriptionKey =
-    credentials?.subscriptionKey ?? process.env.MYDATA_SUBSCRIPTION_KEY ?? "";
-  const baseUrl = process.env.MYDATA_BASE_URL ?? "https://mydatapi.aade.gr";
-  const timeoutMs = Number(process.env.MYDATA_TIMEOUT_MS) || 60000;
-  if (!userId || !subscriptionKey) {
-    return Promise.reject(
-      new Error("myDATA credentials missing.")
-    );
-  }
-  const base = baseUrl.replace(/\/$/, "");
-  const url = new URL(`${base}/myDATA/RequestReceiverInfo`);
-  url.searchParams.set("vat", vat9);
-  return doRequest(url, userId, subscriptionKey, timeoutMs);
-}
-
-const RECEIVER_NAME_KEYS = [
-  "companyname", "company_name", "registrationname", "registration_name",
-  "name", "title", "eponymia", "counterpartyname", "counterparty_name",
-  "businessname", "business_name",
-];
-
-/** Extract company name from RequestReceiverInfo XML/JSON response */
-export function parseReceiverInfoCompanyName(responseText: string): string | null {
-  const trimmed = responseText.trim();
-  if (!trimmed) return null;
-
-  const tryJson = (): string | null => {
-    try {
-      const obj = JSON.parse(trimmed) as Record<string, unknown>;
-      const walk = (o: unknown): string | null => {
-        if (!o || typeof o !== "object") return null;
-        const r = o as Record<string, unknown>;
-        for (const k of Object.keys(r)) {
-          if (RECEIVER_NAME_KEYS.some((n) => k.toLowerCase().includes(n))) {
-            const v = r[k];
-            if (typeof v === "string" && v.trim().length > 1) return v.trim();
-          }
-        }
-        for (const v of Object.values(r)) {
-          const found = walk(v);
-          if (found) return found;
-        }
-        return null;
-      };
-      return walk(obj);
-    } catch {
-      return null;
-    }
-  };
-
-  if (trimmed.startsWith("{") || trimmed.startsWith("[")) return tryJson();
-
-  for (const key of RECEIVER_NAME_KEYS) {
-    const re = new RegExp(`<${key}[^>]*>([^<]+)</${key}>`, "i");
-    const m = trimmed.match(re);
-    if (m) return m[1].trim();
-  }
-  const anyTag = trimmed.match(/<(?:companyName|registrationName|name|eponymia)[^>]*>([^<]+)</i);
-  if (anyTag) return anyTag[1].trim();
-  return null;
-}
-
 function toDdMmYyyy(iso: string): string {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
@@ -232,7 +210,11 @@ function doRequest(
       res.on("data", (chunk: Buffer) => chunks.push(chunk));
       res.on("end", () => {
         const text = Buffer.concat(chunks).toString("utf8");
-        if (res.statusCode === 301 || res.statusCode === 302) {
+        const status = res.statusCode ?? 0;
+        if (process.env.NODE_ENV === "development") {
+          console.log(`[mydata] ${status} ${url.toString()}`);
+        }
+        if (status === 301 || status === 302) {
           const location = res.headers.location;
           if (location) {
             const redirectUrl = location.startsWith("http")
@@ -244,11 +226,14 @@ function doRequest(
             return;
           }
         }
-        if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+        if (status >= 200 && status < 300) {
           resolve(text);
         } else {
+          const baseHint = status === 404
+            ? " Ελέγξτε MYDATA_BASE_URL (π.χ. https://mydatapi.aade.gr)."
+            : "";
           reject(
-            new Error(`myDATA API error ${res.statusCode}: ${text.slice(0, 200)}`)
+            new Error(`myDATA API error ${status}: ${text.slice(0, 200)}${baseHint}`)
           );
         }
       });

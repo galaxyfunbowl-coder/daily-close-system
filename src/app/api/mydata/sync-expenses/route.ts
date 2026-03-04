@@ -3,10 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
 import {
   requestMyExpenses,
-  requestDocs,
-  parseIssuerNamesFromRequestDocs,
-  requestReceiverInfo,
-  parseReceiverInfoCompanyName,
+  requestDocsIssuerNames,
 } from "@/lib/mydata/client";
 import { parseMyExpensesResponse, type NormalizedMyDataExpense } from "@/lib/mydata/parser";
 import { getMyDataCredentials } from "@/lib/mydata/credentials";
@@ -48,8 +45,16 @@ function getCachedName(vat: string): string | undefined {
   );
 }
 
+/** Greek VAT: 9 digits. Pad 8-digit to 9 (e.g. 94005751 → 094005751). */
+function normalizeGreekVat(vat: string): string {
+  const digits = vat.replace(/\D/g, "");
+  if (digits.length === 8) return `0${digits}`;
+  return digits.length === 9 ? digits : vat;
+}
+
 function isFallbackName(name: string, vat: string): boolean {
-  return name === `Προμηθευτής ${vat}`;
+  const vat9 = normalizeGreekVat(vat);
+  return name === `Προμηθευτής ${vat}` || name === `Προμηθευτής ${vat9}`;
 }
 
 async function getOrCreateSupplier(
@@ -58,28 +63,15 @@ async function getOrCreateSupplier(
   creds: { userId: string; subscriptionKey: string }
 ): Promise<{ id: string; defaultCategory: string } | null> {
   if (!issuerVat && !issuerName) return null;
-  const vat = issuerVat?.trim() ?? "";
+  const vatRaw = issuerVat?.trim() ?? "";
+  const vat = normalizeGreekVat(vatRaw);
   let name = issuerName?.trim();
   if (!name && vat) {
-    const cached = getCachedName(vat);
-    if (cached) name = cached;
-    else {
-      try {
-        const resp = await requestReceiverInfo(vat, creds);
-        const fetched = parseReceiverInfoCompanyName(resp);
-        if (fetched) {
-          name = fetched;
-          receiverInfoCache.set(vat.replace(/\D/g, ""), fetched);
-        }
-      } catch {
-        // ignore - use fallback name
-      }
-    }
+    name = getCachedName(vat);
   }
   const fallbackName = vat ? `Προμηθευτής ${vat}` : "Άγνωστος προμηθευτής";
   name = (name || fallbackName).slice(0, 200);
-  const vatDigits = vat.replace(/\D/g, "");
-  const searchVats = Array.from(new Set([vat, vatDigits].filter(Boolean)));
+  const searchVats = Array.from(new Set([vat, vatRaw, vatRaw.replace(/\D/g, "")].filter(Boolean)));
   const existing = searchVats.length > 0
     ? await prisma.supplier.findFirst({
         where: {
@@ -187,18 +179,22 @@ export async function POST(request: NextRequest) {
     const normalized = parseMyExpensesResponse(xmlText);
     fetched = normalized.length;
 
-    // RequestDocs returns full documents with issuer.name; pre-fill cache for supplier names
+    // RequestDocs returns full documents with issuer.name; pre-fill cache for supplier names.
+    // On cryptoKey error for date range, retries per-day for partial results.
     try {
-      const docsText = await requestDocs(dateFrom, dateTo, creds);
-      const issuerNames = parseIssuerNamesFromRequestDocs(docsText);
+      const issuerNames = await requestDocsIssuerNames(dateFrom, dateTo, creds, 31);
       for (const [vat, name] of issuerNames) {
         if (vat && name) {
           const vatNorm = vat.replace(/\D/g, "");
-          if (vatNorm) receiverInfoCache.set(vatNorm, name);
+          if (vatNorm) {
+            receiverInfoCache.set(vatNorm, name);
+            if (vatNorm.length === 8) receiverInfoCache.set(`0${vatNorm}`, name);
+            if (vatNorm.length === 9 && vatNorm.startsWith("0")) receiverInfoCache.set(vatNorm.replace(/^0+/, ""), name);
+          }
         }
       }
     } catch {
-      // Continue without RequestDocs names; getOrCreateSupplier will use requestReceiverInfo fallback
+      // Continue without RequestDocs names; getOrCreateSupplier will use fallback name
     }
 
     for (const n of normalized) {
