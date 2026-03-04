@@ -369,20 +369,21 @@ export default function ExpensesPage() {
       </section>
 
       <section className="card-section overflow-hidden p-0">
-        <h2 className="p-3 font-medium text-neutral-700 dark:text-neutral-300 border-b border-neutral-200 dark:border-neutral-700">
-          {formatMonthLabel(filterMonth)}
-          {!loading && (
-            <>
-              <span className="ml-2 text-sm font-normal text-neutral-500 dark:text-neutral-400">
-                — σύνολο εξόδων{" "}
-                {formatAmount(expenses.reduce((s, e) => s + e.amount, 0) + fixedExpenses.reduce((s, e) => s + e.amount, 0) + payrollTotal)} €
-              </span>
+        <div className="p-3 border-b border-neutral-200 dark:border-neutral-700">
+          <h2 className="font-medium text-neutral-700 dark:text-neutral-300">
+            {formatMonthLabel(filterMonth)}
+            {!loading && (
               <span className="ml-2 text-sm font-normal text-neutral-500 dark:text-neutral-400">
                 — {expenses.length} {expenses.length === 1 ? "τιμολόγιο" : "τιμολόγια"}
               </span>
-            </>
+            )}
+          </h2>
+          {!loading && (
+            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+              Πάγια: {formatAmount(fixedExpenses.reduce((s, e) => s + e.amount, 0))} € — Μισθοδοσία: {formatAmount(payrollTotal)} € — Σύνολο Μήνα: {formatAmount(expenses.reduce((s, e) => s + e.amount, 0) + fixedExpenses.reduce((s, e) => s + e.amount, 0) + payrollTotal)} €
+            </p>
           )}
-        </h2>
+        </div>
         {loading ? (
           <p className="p-4 text-neutral-500 dark:text-neutral-400">Φόρτωση...</p>
         ) : expenses.length === 0 ? (
