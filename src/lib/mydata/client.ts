@@ -37,15 +37,24 @@ export function requestMyExpenses(
     );
   }
 
-  const url = new URL(`${baseUrl.replace(/\/$/, "")}/myDATA/RequestMyExpenses`);
-  const body = buildRequestXml(dateFrom, dateTo);
+  const path = process.env.MYDATA_PATH ?? "/myDATA/RequestMyExpenses";
+  const base = baseUrl.replace(/\/$/, "");
+  const url = new URL(`${base}${path.startsWith("/") ? path : `/${path}`}`);
+  const dateFromDdMm = toDdMmYyyy(dateFrom);
+  const dateToDdMm = toDdMmYyyy(dateTo);
+  url.searchParams.set("dateFrom", dateFromDdMm);
+  url.searchParams.set("dateTo", dateToDdMm);
 
-  return doRequest(url, body, userId, subscriptionKey, timeoutMs);
+  return doRequest(url, userId, subscriptionKey, timeoutMs);
+}
+
+function toDdMmYyyy(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
 }
 
 function doRequest(
   url: URL,
-  body: string,
   userId: string,
   subscriptionKey: string,
   timeoutMs: number
@@ -55,12 +64,10 @@ function doRequest(
       hostname: url.hostname,
       port: url.port || 443,
       path: url.pathname + url.search,
-      method: "POST",
+      method: "GET",
       headers: {
         "aade-user-id": userId,
         "ocp-apim-subscription-key": subscriptionKey,
-        "Content-Type": "text/xml",
-        "Content-Length": Buffer.byteLength(body, "utf8"),
       },
       timeout: timeoutMs,
     };
@@ -76,7 +83,7 @@ function doRequest(
             const redirectUrl = location.startsWith("http")
               ? new URL(location)
               : new URL(location, url.origin + "/");
-            doRequest(redirectUrl, body, userId, subscriptionKey, timeoutMs)
+            doRequest(redirectUrl, userId, subscriptionKey, timeoutMs)
               .then(resolve)
               .catch(reject);
             return;
@@ -106,24 +113,6 @@ function doRequest(
       reject(new Error(`myDATA request timed out after ${timeoutMs}ms`));
     });
 
-    req.write(body, "utf8");
     req.end();
   });
-}
-
-function buildRequestXml(dateFrom: string, dateTo: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<RequestMyExpenses>
-  <dateFrom>${escapeXml(dateFrom)}</dateFrom>
-  <dateTo>${escapeXml(dateTo)}</dateTo>
-</RequestMyExpenses>`;
-}
-
-function escapeXml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }
