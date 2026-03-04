@@ -19,7 +19,7 @@ export function requestMyExpenses(
   const userId = process.env.MYDATA_USER_ID;
   const subscriptionKey = process.env.MYDATA_SUBSCRIPTION_KEY;
   const baseUrl = process.env.MYDATA_BASE_URL ?? "https://mydataapi.aade.gr";
-  const timeoutMs = Number(process.env.MYDATA_TIMEOUT_MS) || 15000;
+  const timeoutMs = Number(process.env.MYDATA_TIMEOUT_MS) || 60000;
 
   if (!userId || !subscriptionKey) {
     return Promise.reject(

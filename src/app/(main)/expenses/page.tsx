@@ -290,7 +290,7 @@ export default function ExpensesPage() {
         return;
       }
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000);
+      const timeoutId = setTimeout(() => controller.abort(), 180000);
       const res = await fetch("/api/mydata/sync-expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -304,15 +304,13 @@ export default function ExpensesPage() {
         return;
       }
       loadExpenses();
-      const msg = `myDATA: ${data.fetched} τιμολόγια, ${data.inserted} νέα, ${data.updated} ενημερωμένα`;
-      if (data.errors?.length) {
-        alert(`${msg}\nΣφάλματα: ${data.errors.length}`);
-      }
+      const msg = `myDATA (${from} έως ${to}):\n${data.fetched} τιμολόγια — ${data.inserted} νέα, ${data.updated} ενημερωμένα${data.errors?.length ? `\nΣφάλματα: ${data.errors.length}` : ""}`;
+      alert(msg);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const isAbort = e instanceof Error && e.name === "AbortError";
       const hint = isAbort
-        ? "Το sync ξεπέρασε 60 δευτ. Η ΑΑΔΕ μπορεί να είναι αργή."
+        ? "Το sync ξεπέρασε 3 λεπτά. Η ΑΑΔΕ μπορεί να είναι αργή."
         : "Ελέγξτε: (1) Είστε συνδεδεμένοι; (2) npm run dev τρέχει; (3) Firewall.";
       alert(`Σφάλμα: ${msg}\n\n${hint}`);
     } finally {
