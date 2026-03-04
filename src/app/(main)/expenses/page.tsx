@@ -28,7 +28,7 @@ function currentMonthISO(): string {
 }
 
 function monthToFromTo(month: string): { from: string; to: string } {
-  if (!month || month.length !== 7) return { from: "2000-01-01", to: "2100-12-31" };
+  if (!month || month === "all" || month.length !== 7) return { from: "2000-01-01", to: "2100-12-31" };
   const [y, m] = month.split("-").map(Number);
   const lastDay = new Date(y, m, 0).getDate();
   return {
@@ -59,7 +59,7 @@ export default function ExpensesPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [fixedExpenses, setFixedExpenses] = useState<{ amount: number }[]>([]);
   const [payrollTotal, setPayrollTotal] = useState(0);
-  const [filterMonth, setFilterMonth] = useState(currentMonthISO());
+  const [filterMonth, setFilterMonth] = useState("all");
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     date: todayISO(),
@@ -95,11 +95,12 @@ export default function ExpensesPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      const monthForFixed = filterMonth === "all" ? currentMonthISO() : filterMonth;
       const [expRes, supRes, fixedRes, payrollRes] = await Promise.all([
         fetch(`/api/expenses?${new URLSearchParams({ from, to })}`),
         fetch("/api/suppliers"),
-        fetch(`/api/admin/fixed-expenses?month=${filterMonth}`),
-        fetch(`/api/admin/staff-salaries?month=${filterMonth}`),
+        fetch(`/api/admin/fixed-expenses?month=${monthForFixed}`),
+        fetch(`/api/admin/staff-salaries?month=${monthForFixed}`),
       ]);
       if (cancelled) return;
       if (expRes.ok) setExpenses(await expRes.json());
@@ -417,19 +418,30 @@ export default function ExpensesPage() {
         <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Μήνας</h2>
         <div className="flex gap-2 flex-wrap">
           <select
-            value={filterMonth.slice(5, 7)}
-            onChange={(e) => setFilterMonth((prev) => `${prev.slice(0, 4)}-${e.target.value}`)}
+            value={filterMonth === "all" ? "all" : filterMonth.slice(5, 7)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "all") setFilterMonth("all");
+              else setFilterMonth((prev) => (prev === "all" ? `${new Date().getFullYear()}-${v}` : `${prev.slice(0, 4)}-${v}`));
+            }}
             className="input-field flex-1"
           >
+            <option value="all">Όλα τα έξοδα</option>
             {MONTH_NAMES.map((name, i) => (
               <option key={name} value={String(i + 1).padStart(2, "0")}>{name}</option>
             ))}
           </select>
           <select
-            value={filterMonth.slice(0, 4)}
-            onChange={(e) => setFilterMonth((prev) => `${e.target.value}-${prev.slice(5, 7)}`)}
+            value={filterMonth === "all" ? "" : filterMonth.slice(0, 4)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!v) return;
+              setFilterMonth((prev) => (prev === "all" ? `${v}-01` : `${v}-${prev.slice(5, 7)}`));
+            }}
             className="input-field flex-1"
+            disabled={filterMonth === "all"}
           >
+            <option value="">—</option>
             {YEARS.map((y) => (
               <option key={y} value={String(y)}>{y}</option>
             ))}
@@ -448,7 +460,7 @@ export default function ExpensesPage() {
       <section className="card-section overflow-hidden p-0">
         <div className="p-3 border-b border-neutral-200 dark:border-neutral-700">
           <h2 className="font-medium text-neutral-700 dark:text-neutral-300">
-            {formatMonthLabel(filterMonth)}
+            {filterMonth === "all" ? "Όλα τα έξοδα" : formatMonthLabel(filterMonth)}
             {!loading && (
               <span className="ml-2 text-sm font-normal text-neutral-500 dark:text-neutral-400">
                 — {expenses.length} {expenses.length === 1 ? "τιμολόγιο" : "τιμολόγια"}
