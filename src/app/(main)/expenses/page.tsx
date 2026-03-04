@@ -274,11 +274,30 @@ export default function ExpensesPage() {
   async function syncMyData() {
     setSyncing(true);
     try {
+      const testRes = await fetch("/api/mydata/sync-expenses");
+      if (!testRes.ok) {
+        alert("Πρέπει να είστε συνδεδεμένοι. Κάντε login πρώτα.");
+        return;
+      }
+      const dryRes = await fetch("/api/mydata/sync-expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dateFrom: from, dateTo: to, dryRun: true }),
+      });
+      if (!dryRes.ok) {
+        const d = await dryRes.json().catch(() => ({}));
+        alert(d.error ?? "Σφάλμα POST (dry run)");
+        return;
+      }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000);
       const res = await fetch("/api/mydata/sync-expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dateFrom: from, dateTo: to }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         alert(data.error ?? "Σφάλμα sync myDATA");
@@ -291,7 +310,11 @@ export default function ExpensesPage() {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      alert(`Σφάλμα δικτύου: ${msg}\n\nΕλέγξτε: (1) Είστε συνδεδεμένοι; (2) Το API key στο .env.local; (3) Firewall/antivirus.`);
+      const isAbort = e instanceof Error && e.name === "AbortError";
+      const hint = isAbort
+        ? "Το sync ξεπέρασε 60 δευτ. Η ΑΑΔΕ μπορεί να είναι αργή."
+        : "Ελέγξτε: (1) Είστε συνδεδεμένοι; (2) npm run dev τρέχει; (3) Firewall.";
+      alert(`Σφάλμα: ${msg}\n\n${hint}`);
     } finally {
       setSyncing(false);
     }

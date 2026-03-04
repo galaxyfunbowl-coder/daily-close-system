@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/require-auth";
 import { requestMyExpenses } from "@/lib/mydata/client";
 import { parseMyExpensesResponse, type NormalizedMyDataExpense } from "@/lib/mydata/parser";
 
+export const maxDuration = 60;
+
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 function todayISO(): string {
@@ -21,15 +23,38 @@ function fallbackUniqueKey(n: NormalizedMyDataExpense): string {
   return parts.join("|");
 }
 
-export async function POST(request: NextRequest) {
+export async function GET() {
   const auth = await requireAuth();
   if (auth) return auth;
+  const hasCredentials = Boolean(
+    process.env.MYDATA_USER_ID && process.env.MYDATA_SUBSCRIPTION_KEY
+  );
+  return NextResponse.json({
+    ok: true,
+    ready: hasCredentials,
+    message: hasCredentials ? "myDATA API reachable" : "Credentials missing",
+  });
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const auth = await requireAuth();
+    if (auth) return auth;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Auth failed";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   let dateFrom: string;
   let dateTo: string;
+  let dryRun = false;
 
   try {
-    const body = (await request.json()) as { dateFrom?: string; dateTo?: string };
+    const body = (await request.json()) as {
+      dateFrom?: string;
+      dateTo?: string;
+      dryRun?: boolean;
+    };
     dateFrom =
       typeof body.dateFrom === "string" && DATE_REGEX.test(body.dateFrom)
         ? body.dateFrom
@@ -38,6 +63,7 @@ export async function POST(request: NextRequest) {
       typeof body.dateTo === "string" && DATE_REGEX.test(body.dateTo)
         ? body.dateTo
         : todayISO();
+    dryRun = body.dryRun === true;
   } catch {
     dateFrom = todayISO();
     dateTo = todayISO();
@@ -51,6 +77,17 @@ export async function POST(request: NextRequest) {
   let skipped = 0;
 
   try {
+    if (dryRun) {
+      return NextResponse.json({
+        fetched: 0,
+        inserted: 0,
+        updated: 0,
+        linkedExpenses: 0,
+        skipped: 0,
+        errors: [],
+        message: "Dry run – AADE not called",
+      });
+    }
     const xmlText = await requestMyExpenses(dateFrom, dateTo);
     const normalized = parseMyExpensesResponse(xmlText);
     fetched = normalized.length;
@@ -162,6 +199,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Sync failed";
+    console.error("[mydata sync]", msg, e);
     return NextResponse.json(
       {
         error: msg,

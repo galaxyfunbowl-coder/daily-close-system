@@ -1,16 +1,19 @@
 /**
  * myDATA (AADE) REST API client - server-side only.
  * Fetches expense documents from AADE myDATA.
+ * Uses Node.js https module (more stable than fetch for external APIs).
  */
+
+import https from "https";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
-export async function requestMyExpenses(
+export function requestMyExpenses(
   dateFrom: string,
   dateTo: string
 ): Promise<string> {
   if (!DATE_REGEX.test(dateFrom) || !DATE_REGEX.test(dateTo)) {
-    throw new Error("Invalid date format. Use YYYY-MM-DD.");
+    return Promise.reject(new Error("Invalid date format. Use YYYY-MM-DD."));
   }
 
   const userId = process.env.MYDATA_USER_ID;
@@ -19,49 +22,85 @@ export async function requestMyExpenses(
   const timeoutMs = Number(process.env.MYDATA_TIMEOUT_MS) || 15000;
 
   if (!userId || !subscriptionKey) {
-    throw new Error(
-      "myDATA credentials missing. Set MYDATA_USER_ID and MYDATA_SUBSCRIPTION_KEY."
+    return Promise.reject(
+      new Error(
+        "myDATA credentials missing. Set MYDATA_USER_ID and MYDATA_SUBSCRIPTION_KEY."
+      )
     );
   }
 
-  const url = `${baseUrl}/myDATA/RequestMyExpenses`;
+  const url = new URL(`${baseUrl.replace(/\/$/, "")}/myDATA/RequestMyExpenses`);
   const body = buildRequestXml(dateFrom, dateTo);
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  return doRequest(url, body, userId, subscriptionKey, timeoutMs);
+}
 
-  try {
-    const res = await fetch(url, {
+function doRequest(
+  url: URL,
+  body: string,
+  userId: string,
+  subscriptionKey: string,
+  timeoutMs: number
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const options: https.RequestOptions = {
+      hostname: url.hostname,
+      port: url.port || 443,
+      path: url.pathname + url.search,
       method: "POST",
       headers: {
         "aade-user-id": userId,
         "ocp-apim-subscription-key": subscriptionKey,
-        "Content-Type": "application/xml",
+        "Content-Type": "text/xml",
+        "Content-Length": Buffer.byteLength(body, "utf8"),
       },
-      body,
-      signal: controller.signal,
+      timeout: timeoutMs,
+    };
+
+    const req = https.request(options, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (chunk: Buffer) => chunks.push(chunk));
+      res.on("end", () => {
+        const text = Buffer.concat(chunks).toString("utf8");
+        if (res.statusCode === 301 || res.statusCode === 302) {
+          const location = res.headers.location;
+          if (location) {
+            const redirectUrl = location.startsWith("http")
+              ? new URL(location)
+              : new URL(location, url.origin + "/");
+            doRequest(redirectUrl, body, userId, subscriptionKey, timeoutMs)
+              .then(resolve)
+              .catch(reject);
+            return;
+          }
+        }
+        if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(text);
+        } else {
+          reject(
+            new Error(`myDATA API error ${res.statusCode}: ${text.slice(0, 200)}`)
+          );
+        }
+      });
+      res.on("error", reject);
     });
-    clearTimeout(timeoutId);
 
-    const text = await res.text();
-
-    if (!res.ok) {
-      throw new Error(
-        `myDATA API error ${res.status}: ${text.slice(0, 200)}`
+    req.on("error", (e) => {
+      reject(
+        new Error(
+          `myDATA connection failed: ${e instanceof Error ? e.message : String(e)}`
+        )
       );
-    }
+    });
 
-    return text;
-  } catch (e) {
-    clearTimeout(timeoutId);
-    if (e instanceof Error) {
-      if (e.name === "AbortError") {
-        throw new Error(`myDATA request timed out after ${timeoutMs}ms`);
-      }
-      throw e;
-    }
-    throw new Error("myDATA request failed");
-  }
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error(`myDATA request timed out after ${timeoutMs}ms`));
+    });
+
+    req.write(body, "utf8");
+    req.end();
+  });
 }
 
 function buildRequestXml(dateFrom: string, dateTo: string): string {
