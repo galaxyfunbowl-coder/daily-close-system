@@ -55,16 +55,47 @@ model PartyEvent {
 }
 
 model Expense {
-  id            String   @id @default(cuid())
-  date          String
-  invoiceNumber String?
-  supplierId    String?
-  supplier      Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  category      String
-  amount        Float
-  paymentMethod String
-  notes         String?
-  imagePath     String?
+  id               String          @id @default(cuid())
+  date             String
+  invoiceNumber    String?
+  supplierId       String?
+  supplier         Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  category         String
+  amount           Float
+  paymentMethod    String
+  notes            String?
+  imagePath        String?
+  source           String?         // "MYDATA" when imported from myDATA
+  userEdited       Boolean         @default(false)
+  myDataExpenseId  String?         @unique
+  myDataExpense    MyDataExpense?  @relation(fields: [myDataExpenseId], references: [id], onDelete: SetNull)
+}
+
+model MyDataExpense {
+  id                    String    @id @default(cuid())
+  mark                  String    @unique
+  uid                   String?
+  issuerVat             String?
+  issuerName            String?
+  receiverVat           String?
+  issueDate             DateTime?
+  invoiceType           String?
+  series                String?
+  aa                    String?
+  netAmount             Float?
+  vatAmount             Float?
+  totalAmount           Float?
+  currency              String?
+  cancellationMark      String?
+  isCancelled           Boolean   @default(false)
+  sourceRaw             String?   // JSON string for debugging
+  attachmentPath        String?
+  attachmentOriginalName String?
+  attachmentMime        String?
+  attachmentUploadedAt  DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  expense               Expense?
 }
 
 model Staff {
@@ -104,6 +135,7 @@ model Supplier {
   id              String   @id @default(cuid())
   name            String
   defaultCategory String
+  vatNumber       String?
   expenses        Expense[]
 }
 

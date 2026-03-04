@@ -108,6 +108,42 @@
 
 ---
 
+## myDATA (AADE) — Συγχρονισμός εξόδων
+
+Η εφαρμογή μπορεί να εισάγει αυτόματα εξόδα από το myDATA της ΑΑΔΕ.
+
+### Προαπαιτούμενα
+
+1. **Εγγραφή στο myDATA REST API** στο portal της ΑΑΔΕ
+2. **Δημιουργία χρήστη API** και λήψη subscription key
+
+### Μεταβλητές περιβάλλοντος (.env.local)
+
+Προσθέστε (server-side only, δεν εκτίθενται στο client):
+
+```
+MYDATA_USER_ID=your_mydata_user_id
+MYDATA_SUBSCRIPTION_KEY=your_subscription_key
+MYDATA_BASE_URL=https://mydataapi.aade.gr
+MYDATA_TIMEOUT_MS=15000
+```
+
+### Τι κάνει το sync
+
+- Καλεί το `RequestMyExpenses` της ΑΑΔΕ για το επιλεγμένο εύρος ημερομηνιών
+- Εισάγει τα τιμολόγια στη βάση (idempotent, χωρίς duplicates)
+- Δημιουργεί εγγραφές Expense για κάθε τιμολόγιο
+- **Δεν** παίρνει PDF από την ΑΑΔΕ — το myDATA δεν υποστηρίζει αρχεία
+
+### Τυπική ροή
+
+1. Πατήστε **"Sync myDATA"** στο Έξοδα (αφού επιλέξετε μήνα)
+2. Εμφανίζονται τα εισαγόμενα με badge «myDATA»
+3. Για τα τιμολόγια χωρίς PDF: badge «PDF missing» + κουμπί «Ανέβασμα PDF»
+4. Ανεβάστε το PDF χειροκίνητα για κάθε τιμολόγιο
+
+---
+
 ## Σημειώσεις
 
 - Ο κωδικός σας hashing γίνεται με bcrypt· τα sessions είναι httpOnly cookies.

@@ -14,6 +14,7 @@ type Expense = {
   paymentMethod: string;
   notes: string;
   imagePath: string | null;
+  source: string | null;
 };
 
 type Supplier = { id: string; name: string; defaultCategory: string };
@@ -76,6 +77,8 @@ export default function ExpensesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ date: "", invoiceNumber: "", noInvoice: false, supplierId: "", category: "", amount: "", isCredit: false, paymentMethod: "", notes: "" });
   const [editImage, setEditImage] = useState<File | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   const { from, to } = monthToFromTo(filterMonth);
 
@@ -268,6 +271,48 @@ export default function ExpensesPage() {
     else alert("Σφάλμα διαγραφής");
   }
 
+  async function syncMyData() {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/mydata/sync-expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dateFrom: from, dateTo: to }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error ?? "Σφάλμα sync myDATA");
+        return;
+      }
+      loadExpenses();
+      const msg = `myDATA: ${data.fetched} τιμολόγια, ${data.inserted} νέα, ${data.updated} ενημερωμένα`;
+      if (data.errors?.length) {
+        alert(`${msg}\nΣφάλματα: ${data.errors.length}`);
+      }
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function uploadPdfForExpense(expenseId: string, file: File) {
+    setUploadingId(expenseId);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/expenses/${expenseId}/invoice`, {
+        method: "POST",
+        body: fd,
+      });
+      if (res.ok) loadExpenses();
+      else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error ?? "Σφάλμα ανεβάσματος");
+      }
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Έξοδα</h1>
@@ -346,7 +391,7 @@ export default function ExpensesPage() {
 
       <section className="card-section">
         <h2 className="mb-3 font-medium text-neutral-700 dark:text-neutral-300">Μήνας</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <select
             value={filterMonth.slice(5, 7)}
             onChange={(e) => setFilterMonth((prev) => `${prev.slice(0, 4)}-${e.target.value}`)}
@@ -365,6 +410,14 @@ export default function ExpensesPage() {
               <option key={y} value={String(y)}>{y}</option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={syncMyData}
+            disabled={syncing}
+            className="btn-primary shrink-0"
+          >
+            {syncing ? "..." : "Sync myDATA"}
+          </button>
         </div>
       </section>
 
@@ -440,10 +493,18 @@ export default function ExpensesPage() {
                 ) : (
                   <div className="flex justify-between items-start gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-neutral-900 dark:text-neutral-100">{e.date}</p>
+                      <div className="flex flex-wrap gap-1 items-center">
+                        <p className="font-medium text-neutral-900 dark:text-neutral-100">{e.date}</p>
+                        {e.source === "MYDATA" && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">myDATA</span>
+                        )}
+                        {e.source === "MYDATA" && !e.imagePath && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">PDF missing</span>
+                        )}
+                      </div>
                       <p className={`text-sm ${e.amount < 0 ? "text-green-600 dark:text-green-400" : "text-neutral-600 dark:text-neutral-400"}`}>{e.supplierName ?? e.category} — {formatAmount(e.amount)} €{e.amount < 0 ? " (πιστωτικό)" : ""}</p>
                       {e.notes && <p className="text-xs text-neutral-500 dark:text-neutral-400">{e.notes}</p>}
-                      {e.imagePath && (
+                      {e.imagePath ? (
                         <a
                           href={`/api/expenses/${e.id}/invoice`}
                           target="_blank"
@@ -452,7 +513,22 @@ export default function ExpensesPage() {
                         >
                           📄 Τιμολόγιο
                         </a>
-                      )}
+                      ) : e.source === "MYDATA" ? (
+                        <label className="inline-flex items-center gap-1 mt-1 text-xs text-amber-600 dark:text-amber-400 hover:underline cursor-pointer">
+                          <input
+                            type="file"
+                            accept="application/pdf,image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={(ev) => {
+                              const f = ev.target.files?.[0];
+                              if (f) uploadPdfForExpense(e.id, f);
+                              ev.target.value = "";
+                            }}
+                            disabled={uploadingId === e.id}
+                          />
+                          {uploadingId === e.id ? "..." : "📤 Ανέβασμα PDF"}
+                        </label>
+                      ) : null}
                     </div>
                     <div className="flex gap-2 shrink-0">
                       <button type="button" onClick={() => startEdit(e)} className="text-sm text-neutral-600 dark:text-neutral-400 hover:underline">Επεξεργασία</button>

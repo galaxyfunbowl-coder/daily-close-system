@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
       paymentMethod: e.paymentMethod,
       notes: e.notes ?? "",
       imagePath: e.imagePath ?? null,
+      source: e.source ?? null,
     }))
   );
 }

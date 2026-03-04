@@ -23,6 +23,7 @@ export async function PATCH(
       amount?: number;
       paymentMethod?: string;
       notes?: string | null;
+      userEdited?: boolean;
     } = {};
     if (typeof body.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)) data.date = body.date;
     if (body.noInvoice === true) {
@@ -37,6 +38,7 @@ export async function PATCH(
     }
     if (body.supplierId !== undefined) data.supplierId = body.supplierId || null;
     if (typeof body.category === "string") data.category = body.category.trim();
+    data.userEdited = true;
     if (typeof body.amount === "number" && !Number.isNaN(body.amount)) data.amount = body.amount;
     if (typeof body.paymentMethod === "string") data.paymentMethod = body.paymentMethod.trim();
     if (body.notes !== undefined) data.notes = body.notes === "" ? null : body.notes;

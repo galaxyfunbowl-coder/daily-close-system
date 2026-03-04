@@ -150,6 +150,21 @@ export async function POST(
       where: { id },
       data: { imagePath },
     });
+    const expenseWithMyData = await prisma.expense.findUnique({
+      where: { id },
+      select: { myDataExpenseId: true },
+    });
+    if (expenseWithMyData?.myDataExpenseId) {
+      await prisma.myDataExpense.update({
+        where: { id: expenseWithMyData.myDataExpenseId },
+        data: {
+          attachmentPath: imagePath,
+          attachmentOriginalName: file.name,
+          attachmentMime: file.type,
+          attachmentUploadedAt: new Date(),
+        },
+      });
+    }
 
     // OCR is slow (15–60s for images); run in background so upload returns quickly
     void (async () => {
